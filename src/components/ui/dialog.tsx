@@ -4,6 +4,7 @@ import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
+import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { BackToHomeLink } from "@/components/back-to-home-link";
 
@@ -36,8 +37,9 @@ const DialogContent = React.forwardRef<
     overlayClassName?: string;
     hideClose?: boolean;
     showBackToHome?: boolean;
+    closeTo?: string;
   }
->(({ className, children, overlayClassName, hideClose, showBackToHome, ...props }, ref) => (
+>(({ className, children, overlayClassName, hideClose, showBackToHome, closeTo, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay className={overlayClassName} />
     <DialogPrimitive.Content
@@ -54,12 +56,21 @@ const DialogContent = React.forwardRef<
           <BackToHomeLink />
         </div>
       )}
-      {!hideClose && (
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background cursor-pointer transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-          <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
-      )}
+      {!hideClose &&
+        (closeTo ? (
+          <Link
+            to={closeTo}
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background cursor-pointer transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            aria-label="חזרה לדף הבית"
+          >
+            <X className="h-4 w-4" />
+          </Link>
+        ) : (
+          <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background cursor-pointer transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
+        ))}
     </DialogPrimitive.Content>
   </DialogPortal>
 ));

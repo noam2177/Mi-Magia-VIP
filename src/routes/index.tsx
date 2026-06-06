@@ -2,10 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/db";
 import { LANDING_BODY_PARAGRAPHS } from "@/lib/landing-content";
-import { getLandingParagraphs, parseSiteSettings, type SiteSettings } from "@/lib/site-settings";
+import { getEventNavigationUrl, getLandingParagraphs, parseSiteSettings, type SiteSettings } from "@/lib/site-settings";
 import { getRsvpSubmitted } from "@/lib/rsvp-storage";
 import { Button } from "@/components/ui/button";
-import { Lock, Heart, Navigation } from "lucide-react";
+import { Lock, Heart, Navigation, MapPin } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 
 export const Route = createFileRoute("/")({
@@ -42,7 +42,8 @@ function LandingPage() {
   const carousel = settings?.carousel_images ?? [];
   const title = settings?.landing_title ?? "דני תומר אפטר חתונה !";
   const bodyParagraphs = settings ? getLandingParagraphs(settings) : [...LANDING_BODY_PARAGRAPHS];
-  const wazeUrl = settings?.waze_url || settings?.navigation_url || "";
+  const eventNavUrl = settings ? getEventNavigationUrl(settings) : "";
+  const wazeUrl = settings?.waze_url || "";
   const googleUrl = settings?.google_maps_url || "";
 
   return (
@@ -88,8 +89,19 @@ function LandingPage() {
             </Button>
           </Link>
 
+          {eventNavUrl && (
+            <div className="mt-4">
+              <a href={eventNavUrl} target="_blank" rel="noopener noreferrer">
+                <Button size="lg" variant="outline" className="text-base px-8 py-5 shadow-md">
+                  <MapPin className="ms-2 h-5 w-5" />
+                  ניווט לאירוע
+                </Button>
+              </a>
+            </div>
+          )}
+
           {(wazeUrl || googleUrl) && (
-            <div className="mt-4 flex flex-wrap justify-center gap-3">
+            <div className="mt-3 flex flex-wrap justify-center gap-3">
               {wazeUrl && (
                 <a href={wazeUrl} target="_blank" rel="noopener noreferrer">
                   <Button size="lg" variant="outline" className="text-base px-6 py-5 shadow-md min-w-[9rem]">

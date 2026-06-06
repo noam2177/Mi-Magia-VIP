@@ -1,3 +1,4 @@
+import { DEFAULT_BROADCAST_MESSAGE } from "@/lib/broadcast-message";
 import { FAQ_QUESTIONS } from "@/lib/faq-questions";
 import { LANDING_BODY_PARAGRAPHS, LANDING_TITLE } from "@/lib/landing-content";
 
@@ -11,9 +12,14 @@ export type SiteSettings = {
   landing_title: string;
   landing_body: string;
   faq_items: FaqItem[];
+  broadcast_message: string;
   collage_images: string[];
   carousel_images: string[];
 };
+
+export function getEventNavigationUrl(settings: SiteSettings): string {
+  return settings.navigation_url || settings.waze_url || settings.google_maps_url || "";
+}
 
 export function parseSiteSettings(raw: Record<string, unknown> | null | undefined): SiteSettings {
   const faqRaw = raw?.faq_items;
@@ -45,6 +51,10 @@ export function parseSiteSettings(raw: Record<string, unknown> | null | undefine
         : LANDING_TITLE,
     landing_body: landingBody,
     faq_items,
+    broadcast_message:
+      typeof raw?.broadcast_message === "string" && raw.broadcast_message.trim()
+        ? raw.broadcast_message
+        : DEFAULT_BROADCAST_MESSAGE,
     collage_images: Array.isArray(raw?.collage_images) ? (raw.collage_images as string[]) : [],
     carousel_images: Array.isArray(raw?.carousel_images) ? (raw.carousel_images as string[]) : [],
   };

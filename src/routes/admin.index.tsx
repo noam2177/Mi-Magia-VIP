@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Trash2, Pencil, MessageCircle, Download, LogOut, Plus, Upload, Check, X as XIcon, Image as ImageIcon } from "lucide-react";
 import { BackToHomeLink } from "@/components/back-to-home-link";
 import { SLEEP_OPTIONS, getSleepLabel } from "@/lib/sleep-options";
+import { DEFAULT_BROADCAST_MESSAGE, formatBroadcastMessage, getInviteLink } from "@/lib/broadcast-message";
 import { parseSiteSettings, type FaqItem, type SiteSettings } from "@/lib/site-settings";
 import { LANDING_BODY_PARAGRAPHS } from "@/lib/landing-content";
 
@@ -165,7 +166,12 @@ function AdminPage() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((row) => (
-                    <InviteeRow key={row.id} row={row} onChanged={loadAll} />
+                    <InviteeRow
+                      key={row.id}
+                      row={row}
+                      onChanged={loadAll}
+                      broadcastMessage={settings.broadcast_message}
+                    />
                   ))}
                   {filtered.length === 0 && (
                     <TableRow>
@@ -205,7 +211,15 @@ function Metric({ label, value, accent }: { label: string; value: number; accent
   );
 }
 
-function InviteeRow({ row, onChanged }: { row: Invitee; onChanged: () => void }) {
+function InviteeRow({
+  row,
+  onChanged,
+  broadcastMessage,
+}: {
+  row: Invitee;
+  onChanged: () => void;
+  broadcastMessage: string;
+}) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(row);
 
@@ -248,7 +262,9 @@ function InviteeRow({ row, onChanged }: { row: Invitee; onChanged: () => void })
     }
     const cleaned = row.phone.replace(/\D/g, "");
     const intl = cleaned.startsWith("0") ? "972" + cleaned.slice(1) : cleaned;
-    window.open(`https://wa.me/${intl}`, "_blank", "noopener,noreferrer");
+    const text = formatBroadcastMessage(broadcastMessage, row.full_name || "", getInviteLink());
+    const url = `https://wa.me/${intl}?text=${encodeURIComponent(text)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
     const { error } = await db.from("invitees").update({ message_sent: true }).eq("id", row.id);
     if (!error) onChanged();
   };
@@ -498,6 +514,7 @@ function CmsPanel({ settings, onSaved }: { settings: SiteSettings; onSaved: () =
   const [googleUrl, setGoogleUrl] = useState(settings.google_maps_url);
   const [navUrl, setNavUrl] = useState(settings.navigation_url);
   const [faqItems, setFaqItems] = useState<FaqItem[]>(settings.faq_items);
+  const [broadcastMessage, setBroadcastMessage] = useState(settings.broadcast_message);
   const [collage, setCollage] = useState<string[]>(settings.collage_images);
   const [carousel, setCarousel] = useState<string[]>(settings.carousel_images);
 
@@ -508,6 +525,7 @@ function CmsPanel({ settings, onSaved }: { settings: SiteSettings; onSaved: () =
     setGoogleUrl(settings.google_maps_url);
     setNavUrl(settings.navigation_url);
     setFaqItems(settings.faq_items);
+    setBroadcastMessage(settings.broadcast_message);
     setCollage(settings.collage_images);
     setCarousel(settings.carousel_images);
   }, [settings]);
@@ -527,6 +545,7 @@ function CmsPanel({ settings, onSaved }: { settings: SiteSettings; onSaved: () =
       google_maps_url: googleUrl,
       navigation_url: navUrl,
       faq_items: faqItems.filter((f) => f.question.trim() && f.answer.trim()),
+      broadcast_message: broadcastMessage,
     });
 
   const upload = async (file: File): Promise<string | null> => {
@@ -566,12 +585,36 @@ function CmsPanel({ settings, onSaved }: { settings: SiteSettings; onSaved: () =
             <Input value={googleUrl} onChange={(e) => setGoogleUrl(e.target.value)} dir="ltr" placeholder="https://maps.google.com/..." />
           </div>
           <div className="space-y-1">
-            <Label>קישור ניווט כללי (גיבוי לוויז)</Label>
-            <Input value={navUrl} onChange={(e) => setNavUrl(e.target.value)} dir="ltr" />
+            <Label>קישור ניווט לאירוע (כפתור ראשי בדף הבית)</Label>
+            <Input value={navUrl} onChange={(e) => setNavUrl(e.target.value)} dir="ltr" placeholder="https://..." />
           </div>
           <p className="text-xs text-muted-foreground">
-            הקישורים כאן מחוברים ישירות לכפתורי "וויז" ו"גוגל מפות" בדף הנחיתה הראשי.
+            כפתור "ניווט לאירוע" בדף הבית משתמש בקישור הניווט, ובמידה וחסר — בוויז או גוגל מפות.
           </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>הודעת תפוצה (WhatsApp)</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-1">
+            <Label>תבנית הודעה</Label>
+            <Textarea
+              value={broadcastMessage}
+              onChange={(e) => setBroadcastMessage(e.target.value)}
+              rows={8}
+              placeholder={DEFAULT_BROADCAST_MESSAGE}
+            />
+            <p className="text-xs text-muted-foreground">
+              השתמשו ב-<code className="px-1 bg-muted rounded">{"{name}"}</code> לשם המוזמן
+              וב-<code className="px-1 bg-muted rounded">{"{link}"}</code> לקישור לאתר.
+              ההודעה נשלחת אחד-אחד מכפתור ה-WhatsApp בטבלת המוזמנים.
+            </p>
+          </div>
+          <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground whitespace-pre-wrap">
+            <p className="font-medium text-foreground mb-1">תצוגה מקדימה (דוגמה):</p>
+            {formatBroadcastMessage(broadcastMessage, "דנה כהן", getInviteLink() || "https://your-site.com")}
+          </div>
         </CardContent>
       </Card>
 
