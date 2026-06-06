@@ -75,7 +75,7 @@ function RsvpEntry() {
       if (values.full_name) orParts.push(`full_name.eq.${values.full_name}`);
       let existingId: string | null = null;
       if (orParts.length) {
-        const { data: existing } = await supabase
+        const { data: existing } = await db
           .from("invitees")
           .select("id")
           .or(orParts.join(","))

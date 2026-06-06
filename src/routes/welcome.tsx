@@ -44,7 +44,7 @@ function WelcomePage() {
       }
     };
     load();
-    const ch = supabase
+    const ch = db
       .channel("settings-welcome")
       .on("postgres_changes", { event: "*", schema: "public", table: "site_settings" }, load)
       .subscribe();
