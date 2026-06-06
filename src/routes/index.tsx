@@ -18,15 +18,17 @@ export const Route = createFileRoute("/")({
   component: LandingPage,
 });
 
+const DEFAULT_SETTINGS = parseSiteSettings(null);
+
 function LandingPage() {
-  const [settings, setSettings] = useState<SiteSettings | null>(null);
+  const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
   const [rsvpDone, setRsvpDone] = useState(false);
 
   useEffect(() => {
     setRsvpDone(getRsvpSubmitted());
     const load = async () => {
       const { data } = await db.from("site_settings").select("*").eq("id", 1).maybeSingle();
-      if (data) setSettings(parseSiteSettings(data));
+      setSettings(parseSiteSettings(data ?? null));
     };
     load();
     const ch = db
@@ -38,13 +40,13 @@ function LandingPage() {
     };
   }, []);
 
-  const collage = settings?.collage_images ?? [];
-  const carousel = settings?.carousel_images ?? [];
-  const title = settings?.landing_title ?? "דני תומר אפטר חתונה !";
-  const bodyParagraphs = settings ? getLandingParagraphs(settings) : [...LANDING_BODY_PARAGRAPHS];
-  const eventNavUrl = settings ? getEventNavigationUrl(settings) : "";
-  const wazeUrl = settings?.waze_url || "";
-  const googleUrl = settings?.google_maps_url || "";
+  const collage = settings.collage_images;
+  const carousel = settings.carousel_images;
+  const title = settings.landing_title;
+  const bodyParagraphs = getLandingParagraphs(settings);
+  const eventNavUrl = getEventNavigationUrl(settings);
+  const wazeUrl = settings.waze_url;
+  const googleUrl = settings.google_maps_url;
 
   return (
     <div className="min-h-screen relative">
@@ -89,16 +91,27 @@ function LandingPage() {
             </Button>
           </Link>
 
-          {eventNavUrl && (
-            <div className="mt-4">
+          <div className="mt-4">
+            {eventNavUrl ? (
               <a href={eventNavUrl} target="_blank" rel="noopener noreferrer">
                 <Button size="lg" variant="outline" className="text-base px-8 py-5 shadow-md">
                   <MapPin className="ms-2 h-5 w-5" />
                   ניווט לאירוע
                 </Button>
               </a>
-            </div>
-          )}
+            ) : (
+              <Button
+                size="lg"
+                variant="outline"
+                disabled
+                className="text-base px-8 py-5 shadow-md opacity-70"
+                title="קישור ניווט יוגדר בקרוב בפאנל הניהול"
+              >
+                <MapPin className="ms-2 h-5 w-5" />
+                ניווט לאירוע
+              </Button>
+            )}
+          </div>
 
           {(wazeUrl || googleUrl) && (
             <div className="mt-3 flex flex-wrap justify-center gap-3">
