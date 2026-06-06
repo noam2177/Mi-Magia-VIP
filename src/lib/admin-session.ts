@@ -1,7 +1,7 @@
 // Client-side admin "session" — name + hardcoded password (per user request).
 // NOTE: not a real security boundary; warned the user.
 const KEY = "rsvp_admin_session_v1";
-const ALLOWED_NAMES = ["נעם", "דניאל", "תומר"];
+const ALLOWED_NAMES = ["נעם", "דני", "תומר"];
 const PASSWORD = "123456";
 
 export function adminLogin(name: string, password: string): string | null {
