@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { BackToHomeLink } from "@/components/back-to-home-link";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,9 @@ function AdminLoginPage() {
             </div>
             <Button type="submit" className="w-full">כניסה</Button>
           </form>
+          <div className="mt-4 flex justify-center">
+            <BackToHomeLink />
+          </div>
         </CardContent>
       </Card>
     </div>

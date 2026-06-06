@@ -19,6 +19,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2, Pencil, MessageCircle, Download, LogOut, Plus, Upload, Check, X as XIcon, Image as ImageIcon } from "lucide-react";
+import { BackToHomeLink } from "@/components/back-to-home-link";
+import { SLEEP_OPTIONS, getSleepLabel } from "@/lib/sleep-options";
+import { parseSiteSettings, type FaqItem, type SiteSettings } from "@/lib/site-settings";
+import { LANDING_BODY_PARAGRAPHS } from "@/lib/landing-content";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminPage,
@@ -30,25 +34,21 @@ type Invitee = {
   phone: string | null;
   status: "attending" | "not_attending" | null;
   guests: number;
-  sleep: boolean;
+  sleep: string | boolean | null;
   blessing: string | null;
+  guest_question: string | null;
   message_sent: boolean;
   created_at: string;
 };
 
-type Settings = {
-  main_text: string;
-  navigation_url: string;
-  collage_images: string[];
-  carousel_images: string[];
-};
+const DEFAULT_SETTINGS: SiteSettings = parseSiteSettings(null);
 
 function AdminPage() {
   const navigate = useNavigate();
   const [authChecked, setAuthChecked] = useState(false);
   const [list, setList] = useState<Invitee[]>([]);
   const [search, setSearch] = useState("");
-  const [settings, setSettings] = useState<Settings | null>(null);
+  const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
     if (!getAdminSession()) {
@@ -62,14 +62,7 @@ function AdminPage() {
     const { data } = await db.from("invitees").select("*").order("created_at", { ascending: false });
     if (data) setList(data as Invitee[]);
     const { data: s } = await db.from("site_settings").select("*").eq("id", 1).maybeSingle();
-    if (s) {
-      setSettings({
-        main_text: s.main_text,
-        navigation_url: s.navigation_url,
-        collage_images: s.collage_images || [],
-        carousel_images: s.carousel_images || [],
-      });
-    }
+    setSettings(parseSiteSettings(s ?? null));
   };
 
   useEffect(() => {
@@ -113,10 +106,13 @@ function AdminPage() {
     <div className="min-h-screen bg-[color:var(--pink-soft)]">
       <header className="bg-white border-b sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-          <h1 className="text-xl font-bold">פאנל ניהול — דניאל תומר אפטר חתונה</h1>
-          <Button variant="ghost" size="sm" onClick={() => { adminLogout(); navigate({ to: "/admin/login" }); }}>
-            <LogOut className="ms-1 h-4 w-4" /> יציאה
-          </Button>
+          <h1 className="text-xl font-bold">פאנל ניהול — דני תומר אפטר חתונה</h1>
+          <div className="flex items-center gap-3">
+            <BackToHomeLink />
+            <Button variant="ghost" size="sm" onClick={() => { adminLogout(); navigate({ to: "/admin/login" }); }}>
+              <LogOut className="ms-1 h-4 w-4" /> יציאה
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -162,6 +158,7 @@ function AdminPage() {
                     <TableHead>אורחים</TableHead>
                     <TableHead>לינה</TableHead>
                     <TableHead>ברכה</TableHead>
+                    <TableHead>שאלה</TableHead>
                     <TableHead>הודעה</TableHead>
                     <TableHead>פעולות</TableHead>
                   </TableRow>
@@ -172,7 +169,7 @@ function AdminPage() {
                   ))}
                   {filtered.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                         אין נתונים
                       </TableCell>
                     </TableRow>
@@ -187,7 +184,7 @@ function AdminPage() {
           </TabsContent>
 
           <TabsContent value="cms">
-            {settings && <CmsPanel settings={settings} onSaved={loadAll} />}
+            <CmsPanel settings={settings} onSaved={loadAll} />
           </TabsContent>
         </Tabs>
       </main>
@@ -224,6 +221,7 @@ function InviteeRow({ row, onChanged }: { row: Invitee; onChanged: () => void })
         guests: Number(draft.guests) || 1,
         sleep: draft.sleep,
         blessing: draft.blessing,
+        guest_question: draft.guest_question,
       })
       .eq("id", row.id);
     if (error) toast.error("שגיאה בשמירה");
@@ -270,8 +268,27 @@ function InviteeRow({ row, onChanged }: { row: Invitee; onChanged: () => void })
           </Select>
         </TableCell>
         <TableCell><Input type="number" min={1} max={5} value={draft.guests} onChange={(e) => setDraft({ ...draft, guests: Number(e.target.value) })} className="w-16" /></TableCell>
-        <TableCell><Checkbox checked={draft.sleep} onCheckedChange={(c) => setDraft({ ...draft, sleep: Boolean(c) })} /></TableCell>
+        <TableCell>
+          <Select
+            value={
+              typeof draft.sleep === "string"
+                ? SLEEP_OPTIONS.find((o) => o.label === draft.sleep || o.value === draft.sleep)?.value ?? "no_sleep"
+                : draft.sleep
+                  ? "tent_large"
+                  : "no_sleep"
+            }
+            onValueChange={(v) => setDraft({ ...draft, sleep: SLEEP_OPTIONS.find((o) => o.value === v)?.label ?? v })}
+          >
+            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {SLEEP_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </TableCell>
         <TableCell><Input value={draft.blessing ?? ""} onChange={(e) => setDraft({ ...draft, blessing: e.target.value })} /></TableCell>
+        <TableCell><Input value={draft.guest_question ?? ""} onChange={(e) => setDraft({ ...draft, guest_question: e.target.value })} /></TableCell>
         <TableCell>{row.message_sent ? <Check className="h-4 w-4 text-green-600" /> : <XIcon className="h-4 w-4 text-muted-foreground" />}</TableCell>
         <TableCell>
           <div className="flex gap-1">
@@ -293,8 +310,9 @@ function InviteeRow({ row, onChanged }: { row: Invitee; onChanged: () => void })
         {!row.status && <span className="text-muted-foreground">—</span>}
       </TableCell>
       <TableCell>{row.guests}</TableCell>
-      <TableCell>{row.sleep ? "כן" : "לא"}</TableCell>
+      <TableCell className="max-w-[12rem] truncate" title={getSleepLabel(row.sleep)}>{getSleepLabel(row.sleep)}</TableCell>
       <TableCell className="max-w-xs truncate" title={row.blessing ?? ""}>{row.blessing || "—"}</TableCell>
+      <TableCell className="max-w-xs truncate" title={row.guest_question ?? ""}>{row.guest_question || "—"}</TableCell>
       <TableCell>{row.message_sent ? <Check className="h-4 w-4 text-green-600" /> : <XIcon className="h-4 w-4 text-muted-foreground" />}</TableCell>
       <TableCell>
         <div className="flex gap-1">
@@ -308,7 +326,7 @@ function InviteeRow({ row, onChanged }: { row: Invitee; onChanged: () => void })
             <AlertDialogTrigger asChild>
               <Button size="icon" variant="ghost"><Trash2 className="h-4 w-4 text-red-600" /></Button>
             </AlertDialogTrigger>
-            <AlertDialogContent dir="rtl">
+            <AlertDialogContent dir="rtl" showBackToHome>
               <AlertDialogHeader>
                 <AlertDialogTitle>למחוק את {row.full_name || row.phone}?</AlertDialogTitle>
                 <AlertDialogDescription>פעולה זו אינה הפיכה.</AlertDialogDescription>
@@ -350,7 +368,7 @@ function AddInviteeDialog({ onSaved }: { onSaved: () => void }) {
       <DialogTrigger asChild>
         <Button size="sm"><Plus className="ms-1 h-4 w-4" /> מוזמן חדש</Button>
       </DialogTrigger>
-      <DialogContent dir="rtl">
+      <DialogContent dir="rtl" showBackToHome>
         <DialogHeader><DialogTitle>הוספת מוזמן</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1"><Label>שם מלא</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
@@ -460,8 +478,9 @@ function exportToExcel(rows: Invitee[]) {
     טלפון: r.phone || "",
     סטטוס: r.status === "attending" ? "מגיע" : r.status === "not_attending" ? "לא מגיע" : "",
     אורחים: r.guests,
-    לינה: r.sleep ? "כן" : "לא",
+    לינה: getSleepLabel(r.sleep),
     ברכה: r.blessing || "",
+    שאלה: r.guest_question || "",
     "הודעה נשלחה": r.message_sent ? "כן" : "לא",
   }));
   const ws = XLSX.utils.json_to_sheet(data);
@@ -470,24 +489,45 @@ function exportToExcel(rows: Invitee[]) {
   XLSX.writeFile(wb, "invitees.xlsx");
 }
 
-function CmsPanel({ settings, onSaved }: { settings: Settings; onSaved: () => void }) {
-  const [mainText, setMainText] = useState(settings.main_text);
+function CmsPanel({ settings, onSaved }: { settings: SiteSettings; onSaved: () => void }) {
+  const [landingTitle, setLandingTitle] = useState(settings.landing_title);
+  const [landingBody, setLandingBody] = useState(
+    settings.landing_body || LANDING_BODY_PARAGRAPHS.join("\n\n"),
+  );
+  const [wazeUrl, setWazeUrl] = useState(settings.waze_url);
+  const [googleUrl, setGoogleUrl] = useState(settings.google_maps_url);
   const [navUrl, setNavUrl] = useState(settings.navigation_url);
+  const [faqItems, setFaqItems] = useState<FaqItem[]>(settings.faq_items);
   const [collage, setCollage] = useState<string[]>(settings.collage_images);
   const [carousel, setCarousel] = useState<string[]>(settings.carousel_images);
 
   useEffect(() => {
-    setMainText(settings.main_text);
+    setLandingTitle(settings.landing_title);
+    setLandingBody(settings.landing_body || LANDING_BODY_PARAGRAPHS.join("\n\n"));
+    setWazeUrl(settings.waze_url);
+    setGoogleUrl(settings.google_maps_url);
     setNavUrl(settings.navigation_url);
+    setFaqItems(settings.faq_items);
     setCollage(settings.collage_images);
     setCarousel(settings.carousel_images);
   }, [settings]);
 
-  const persist = async (patch: Partial<Settings>) => {
-    const { error } = await db.from("site_settings").update(patch).eq("id", 1);
+  const persist = async (patch: Record<string, unknown>) => {
+    const { error } = await db.from("site_settings").upsert({ id: 1, ...patch }, { onConflict: "id" });
     if (error) toast.error("שגיאה בשמירה");
     else { toast.success("נשמר"); onSaved(); }
   };
+
+  const saveContent = () =>
+    persist({
+      landing_title: landingTitle,
+      landing_body: landingBody,
+      main_text: landingTitle,
+      waze_url: wazeUrl,
+      google_maps_url: googleUrl,
+      navigation_url: navUrl,
+      faq_items: faqItems.filter((f) => f.question.trim() && f.answer.trim()),
+    });
 
   const upload = async (file: File): Promise<string | null> => {
     const path = `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name.replace(/\s+/g, "_")}`;
@@ -500,16 +540,93 @@ function CmsPanel({ settings, onSaved }: { settings: Settings; onSaved: () => vo
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader><CardTitle>טקסט וקישור ניווט</CardTitle></CardHeader>
+        <CardHeader><CardTitle>דף הבית — כותרת וטקסט</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <div className="space-y-1"><Label>טקסט מרכזי</Label><Input value={mainText} onChange={(e) => setMainText(e.target.value)} /></div>
-          <div className="space-y-1"><Label>קישור Waze / Google Maps</Label><Input value={navUrl} onChange={(e) => setNavUrl(e.target.value)} dir="ltr" /></div>
-          <Button onClick={() => persist({ main_text: mainText, navigation_url: navUrl })}>שמירה</Button>
+          <div className="space-y-1">
+            <Label>כותרת דף הבית</Label>
+            <Input value={landingTitle} onChange={(e) => setLandingTitle(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <Label>טקסט ההזמנה (פסקה ריקה = פסקה חדשה)</Label>
+            <Textarea value={landingBody} onChange={(e) => setLandingBody(e.target.value)} rows={12} />
+            <p className="text-xs text-muted-foreground">הטקסט הזה מוצג במשבצת הטקסט המרכזית בדף הבית.</p>
+          </div>
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader><CardTitle>קישורי ניווט</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-1">
+            <Label>קישור וויז</Label>
+            <Input value={wazeUrl} onChange={(e) => setWazeUrl(e.target.value)} dir="ltr" placeholder="https://waze.com/ul/..." />
+          </div>
+          <div className="space-y-1">
+            <Label>קישור גוגל מפות</Label>
+            <Input value={googleUrl} onChange={(e) => setGoogleUrl(e.target.value)} dir="ltr" placeholder="https://maps.google.com/..." />
+          </div>
+          <div className="space-y-1">
+            <Label>קישור ניווט כללי (גיבוי לוויז)</Label>
+            <Input value={navUrl} onChange={(e) => setNavUrl(e.target.value)} dir="ltr" />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            הקישורים כאן מחוברים ישירות לכפתורי "וויז" ו"גוגל מפות" בדף הנחיתה הראשי.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>שאלות נפוצות (בטופס אישור הגעה)</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          {faqItems.map((item, i) => (
+            <div key={i} className="space-y-2 rounded-lg border p-3">
+              <div className="flex items-center justify-between">
+                <Label>שאלה {i + 1}</Label>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => setFaqItems(faqItems.filter((_, idx) => idx !== i))}
+                >
+                  <Trash2 className="h-4 w-4 text-red-600" />
+                </Button>
+              </div>
+              <Input
+                value={item.question}
+                onChange={(e) => {
+                  const next = [...faqItems];
+                  next[i] = { ...next[i], question: e.target.value };
+                  setFaqItems(next);
+                }}
+              />
+              <Textarea
+                value={item.answer}
+                onChange={(e) => {
+                  const next = [...faqItems];
+                  next[i] = { ...next[i], answer: e.target.value };
+                  setFaqItems(next);
+                }}
+                rows={2}
+              />
+            </div>
+          ))}
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setFaqItems([...faqItems, { question: "", answer: "" }])}
+          >
+            <Plus className="ms-1 h-4 w-4" /> הוספת שאלה
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Button onClick={saveContent}>שמירת תוכן וקישורים</Button>
+
       <ImageManager
         title="תמונות קולאז' (רקע)"
+        description="תמונות שמוצגות כרקע פסיפס בדף הבית."
+        emptyHint="כאן יופיעו תמונות הרקע (קולאז')."
         images={collage}
         onUpload={async (f) => {
           const url = await upload(f);
@@ -523,6 +640,8 @@ function CmsPanel({ settings, onSaved }: { settings: Settings; onSaved: () => vo
 
       <ImageManager
         title="תמונות קרוסלה (תחתית)"
+        description="תמונות שמוצגות בקרוסלה בתחתית דף הבית."
+        emptyHint="כאן יופיעו תמונות הקרוסלה."
         images={carousel}
         onUpload={async (f) => {
           const url = await upload(f);
@@ -538,13 +657,21 @@ function CmsPanel({ settings, onSaved }: { settings: Settings; onSaved: () => vo
 }
 
 function ImageManager({
-  title, images, onUpload, onDelete,
-}: { title: string; images: string[]; onUpload: (f: File) => void; onDelete: (url: string) => void }) {
+  title, description, emptyHint, images, onUpload, onDelete,
+}: {
+  title: string;
+  description?: string;
+  emptyHint?: string;
+  images: string[];
+  onUpload: (f: File) => void;
+  onDelete: (url: string) => void;
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <Card>
       <CardHeader><CardTitle className="flex items-center gap-2"><ImageIcon className="h-4 w-4" /> {title}</CardTitle></CardHeader>
       <CardContent className="space-y-3">
+        {description && <p className="text-sm text-muted-foreground">{description}</p>}
         <input
           ref={inputRef} type="file" accept="image/*" className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); if (inputRef.current) inputRef.current.value = ""; }}
@@ -563,7 +690,11 @@ function ImageManager({
               </button>
             </div>
           ))}
-          {images.length === 0 && <p className="col-span-full text-sm text-muted-foreground">אין תמונות.</p>}
+          {images.length === 0 && (
+            <div className="col-span-full rounded-md border border-dashed bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
+              {emptyHint || "אין תמונות כרגע. אפשר להעלות מהכפתור למעלה."}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
