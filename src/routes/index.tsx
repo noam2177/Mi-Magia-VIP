@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -96,10 +96,10 @@ function RsvpEntry() {
 
       let id = existingId;
       if (existingId) {
-        const { error } = await supabase.from("invitees").update(payload).eq("id", existingId);
+        const { error } = await db.from("invitees").update(payload).eq("id", existingId);
         if (error) throw error;
       } else {
-        const { data, error } = await supabase.from("invitees").insert(payload).select("id").single();
+        const { data, error } = await db.from("invitees").insert(payload).select("id").single();
         if (error) throw error;
         id = data.id;
       }

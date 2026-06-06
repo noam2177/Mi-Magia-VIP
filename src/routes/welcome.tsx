@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db";
 import { getRsvpSubmitted } from "@/lib/rsvp-storage";
 import { Button } from "@/components/ui/button";
 import { MapPin, Lock } from "lucide-react";
@@ -33,7 +33,7 @@ function WelcomePage() {
       return;
     }
     const load = async () => {
-      const { data } = await supabase.from("site_settings").select("*").eq("id", 1).maybeSingle();
+      const { data } = await db.from("site_settings").select("*").eq("id", 1).maybeSingle();
       if (data) {
         setSettings({
           main_text: data.main_text,
@@ -49,7 +49,7 @@ function WelcomePage() {
       .on("postgres_changes", { event: "*", schema: "public", table: "site_settings" }, load)
       .subscribe();
     return () => {
-      supabase.removeChannel(ch);
+      db.removeChannel(ch);
     };
   }, [navigate]);
 
