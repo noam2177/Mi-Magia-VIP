@@ -1,0 +1,57 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { adminLogin, getAdminSession } from "@/lib/admin-session";
+import { toast } from "sonner";
+
+export const Route = createFileRoute("/admin/login")({
+  component: AdminLoginPage,
+});
+
+function AdminLoginPage() {
+  const navigate = useNavigate();
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+
+  useEffect(() => {
+    if (getAdminSession()) navigate({ to: "/admin" });
+  }, [navigate]);
+
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const err = adminLogin(name, password);
+    if (err) {
+      toast.error(err);
+      return;
+    }
+    toast.success("ברוך הבא!");
+    navigate({ to: "/admin" });
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-white to-[color:var(--pink-soft)]">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle>כניסת מנהל</CardTitle>
+          <CardDescription>הזן שם פרטי וסיסמה</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">שם פרטי</Label>
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">סיסמה</Label>
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            </div>
+            <Button type="submit" className="w-full">כניסה</Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
