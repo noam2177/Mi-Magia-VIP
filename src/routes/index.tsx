@@ -46,7 +46,7 @@ const schema = z
     path: ["full_name"],
   });
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.input<typeof schema>;
 
 function RsvpEntry() {
   const navigate = useNavigate();
@@ -59,9 +59,10 @@ function RsvpEntry() {
   }, [navigate]);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { status: undefined as unknown as "attending", guests: 1, sleep: false, blessing: "", full_name: "", phone: "" },
+    resolver: zodResolver(schema) as any,
+    defaultValues: { status: undefined as any, guests: 1, sleep: false, blessing: "", full_name: "", phone: "" },
   });
+
 
   const status = form.watch("status");
 
