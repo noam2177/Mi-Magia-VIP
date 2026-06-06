@@ -84,6 +84,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "דניאל תומר אפטר חתונה !" },
       { property: "og:description", content: "אישור הגעה לחתונה של דניאל ותומר" },
       { property: "og:type", content: "website" },
+      { name: "twitter:title", content: "דניאל תומר אפטר חתונה !" },
+      { name: "twitter:description", content: "אישור הגעה לחתונה של דניאל ותומר" },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0b0cd05e-ca1f-446e-8daf-2fce5a458e9d/id-preview-858eeb8c--b1c11060-9138-411d-bbab-f31371ea8580.lovable.app-1780768374220.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0b0cd05e-ca1f-446e-8daf-2fce5a458e9d/id-preview-858eeb8c--b1c11060-9138-411d-bbab-f31371ea8580.lovable.app-1780768374220.png" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
