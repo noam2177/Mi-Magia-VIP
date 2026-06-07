@@ -6,7 +6,8 @@ export type NotificationType =
   | "rsvp_not_attending"
   | "rsvp_updated"
   | "self_registration"
-  | "guest_question";
+  | "guest_question"
+  | "invite_added";
 
 export type AdminNotification = {
   id: string;
@@ -128,6 +129,63 @@ export async function notifyRsvpSubmit(params: {
   }
 }
 
+export async function notifyInviteeAdded(params: {
+  inviteeId: string;
+  fullName?: string | null;
+  phone?: string | null;
+  source?: "admin" | "import";
+  batchCount?: number;
+}) {
+  const name = displayName(params.fullName, params.phone);
+  const sourceLabel = params.source === "import" ? "ייבוא" : "פאנל ניהול";
+
+  if (params.batchCount && params.batchCount > 1 && !params.fullName && !params.phone) {
+    await pushNotification({
+      type: "invite_added",
+      invitee_id: null,
+      title: `נוספו ${params.batchCount} מוזמנים חדשים`,
+      body: `מקור: ${sourceLabel}`,
+      meta: { count: params.batchCount, source: params.source },
+    });
+    return;
+  }
+
+  await pushNotification({
+    type: "invite_added",
+    invitee_id: params.inviteeId,
+    title: `מוזמן חדש: ${name}`,
+    body: [params.phone?.trim() && `טלפון: ${params.phone.trim()}`, `מקור: ${sourceLabel}`]
+      .filter(Boolean)
+      .join(" · "),
+    meta: { source: params.source },
+  });
+}
+
+export async function notifyInviteesAddedBatch(
+  rows: Array<{ id: string; full_name: string | null; phone: string | null }>,
+  source: "admin" | "import",
+) {
+  if (rows.length === 0) return;
+  if (rows.length > 8) {
+    await notifyInviteeAdded({
+      inviteeId: rows[0].id,
+      source,
+      batchCount: rows.length,
+    });
+    return;
+  }
+  await Promise.all(
+    rows.map((row) =>
+      notifyInviteeAdded({
+        inviteeId: row.id,
+        fullName: row.full_name,
+        phone: row.phone,
+        source,
+      }),
+    ),
+  );
+}
+
 export async function notifySelfRegistration(params: {
   inviteeId: string;
   fullName: string;
@@ -169,6 +227,8 @@ export function notificationTypeLabel(type: NotificationType): string {
       return "הרשמה חדשה";
     case "guest_question":
       return "שאלה ממוזמן";
+    case "invite_added":
+      return "מוזמן חדש";
     default:
       return "התראה";
   }

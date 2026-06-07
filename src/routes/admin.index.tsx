@@ -27,6 +27,8 @@ import { DEFAULT_BROADCAST_MESSAGE, formatBroadcastMessage, getInviteLink } from
 import { parseSiteSettings, type FaqItem, type SiteSettings } from "@/lib/site-settings";
 import { LANDING_BODY_PARAGRAPHS } from "@/lib/landing-content";
 import { ACCEPTED_IMAGE_ACCEPT } from "@/lib/image-upload";
+import { insertInvitee } from "@/lib/invitees-db";
+import { notifyInviteeAdded, notifyInviteesAddedBatch } from "@/lib/notifications";
 import { uploadEventImageFile } from "@/lib/upload-event-image";
 import { AdminGuestMessagesButton, AdminNotificationsBell } from "@/components/admin-notifications-bell";
 import { cn } from "@/lib/utils";
@@ -148,7 +150,9 @@ function AdminPage() {
     const guestsTotal = list
       .filter((i) => i.status === "attending")
       .reduce((s, i) => s + (i.guests || 1), 0);
-    return { total, yes, no, pending, guestsTotal };
+    const messagesSent = list.filter((i) => i.message_sent).length;
+    const questionsAsked = list.filter((i) => i.guest_question?.trim()).length;
+    return { total, yes, no, pending, guestsTotal, messagesSent, questionsAsked };
   }, [list]);
 
   const filtered = useMemo(() => {
@@ -166,9 +170,9 @@ function AdminPage() {
   return (
     <div className="min-h-screen bg-[color:var(--pink-soft)]">
       <header className="bg-white border-b sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-          <h1 className="text-xl font-bold">פאנל ניהול — דני תומר אפטר חתונה</h1>
-          <div className="flex items-center gap-2 sm:gap-3">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2">
+          <h1 className="text-sm sm:text-xl font-bold truncate min-w-0">פאנל ניהול — דני תומר אפטר חתונה</h1>
+          <div className="flex items-center gap-1 sm:gap-3 shrink-0">
             <AdminNotificationsBell />
             <AdminGuestMessagesButton invitees={list} />
             <BackToHomeLink />
@@ -206,16 +210,18 @@ function AdminPage() {
         )}
 
         {/* Metrics */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2 sm:gap-3">
           <Metric label="סה״כ מוזמנים" value={metrics.total} />
           <Metric label="מגיעים" value={metrics.yes} accent />
           <Metric label="לא מגיעים" value={metrics.no} />
           <Metric label="ללא מענה" value={metrics.pending} />
           <Metric label="סה״כ אורחים" value={metrics.guestsTotal} accent />
+          <Metric label="קיבלו הודעה" value={metrics.messagesSent} />
+          <Metric label="שאלות ממוזמנים" value={metrics.questionsAsked} accent />
         </div>
 
         <Tabs defaultValue="table" className="w-full">
-          <TabsList>
+          <TabsList className="w-full sm:w-auto grid grid-cols-3 h-auto">
             <TabsTrigger value="table">טבלה</TabsTrigger>
             <TabsTrigger value="import">ייבוא</TabsTrigger>
             <TabsTrigger value="cms">תוכן ותמונות</TabsTrigger>
@@ -241,13 +247,13 @@ function AdminPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>שם</TableHead>
-                    <TableHead>טלפון</TableHead>
+                    <TableHead className="hidden sm:table-cell">טלפון</TableHead>
                     <TableHead>סטטוס</TableHead>
-                    <TableHead>אורחים</TableHead>
-                    <TableHead>לינה</TableHead>
-                    <TableHead>ברכה</TableHead>
-                    <TableHead>שאלה</TableHead>
-                    <TableHead>הודעה</TableHead>
+                    <TableHead className="hidden md:table-cell">אורחים</TableHead>
+                    <TableHead className="hidden lg:table-cell">לינה</TableHead>
+                    <TableHead className="hidden lg:table-cell">ברכה</TableHead>
+                    <TableHead className="hidden md:table-cell">שאלה</TableHead>
+                    <TableHead className="hidden sm:table-cell">הודעה</TableHead>
                     <TableHead>פעולות</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -288,11 +294,11 @@ function AdminPage() {
 function Metric({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
   return (
     <Card>
-      <CardHeader className="pb-1">
-        <CardTitle className="text-sm font-normal text-muted-foreground">{label}</CardTitle>
+      <CardHeader className="pb-0.5 px-3 sm:px-6 pt-3 sm:pt-6">
+        <CardTitle className="text-xs sm:text-sm font-normal text-muted-foreground leading-tight">{label}</CardTitle>
       </CardHeader>
-      <CardContent>
-        <p className={`text-3xl font-bold ${accent ? "text-[color:var(--pink-deep)]" : ""}`}>{value}</p>
+      <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6 pt-1">
+        <p className={`text-2xl sm:text-3xl font-bold ${accent ? "text-[color:var(--pink-deep)]" : ""}`}>{value}</p>
       </CardContent>
     </Card>
   );
@@ -426,25 +432,26 @@ function InviteeRow({
           )}
         </div>
       </TableCell>
-      <TableCell dir="ltr" className="text-start">{row.phone || "—"}</TableCell>
+      <TableCell dir="ltr" className="text-start hidden sm:table-cell">{row.phone || "—"}</TableCell>
       <TableCell>
         {row.status === "attending" && <span className="text-green-700">מגיע</span>}
         {row.status === "not_attending" && <span className="text-red-700">לא מגיע</span>}
         {!row.status && <span className="text-muted-foreground">—</span>}
+        {hasQuestion && <span className="sm:hidden ms-1 text-amber-600 text-xs">❓</span>}
       </TableCell>
-      <TableCell>{row.guests}</TableCell>
-      <TableCell className="max-w-[12rem] truncate" title={getSleepLabel(row.sleep)}>{getSleepLabel(row.sleep)}</TableCell>
-      <TableCell className="max-w-xs truncate" title={row.blessing ?? ""}>{row.blessing || "—"}</TableCell>
+      <TableCell className="hidden md:table-cell">{row.guests}</TableCell>
+      <TableCell className="max-w-[12rem] truncate hidden lg:table-cell" title={getSleepLabel(row.sleep)}>{getSleepLabel(row.sleep)}</TableCell>
+      <TableCell className="max-w-xs truncate hidden lg:table-cell" title={row.blessing ?? ""}>{row.blessing || "—"}</TableCell>
       <TableCell
         className={cn(
-          "max-w-xs truncate",
+          "max-w-xs truncate hidden md:table-cell",
           hasQuestion && "font-semibold text-amber-900",
         )}
         title={row.guest_question ?? ""}
       >
         {row.guest_question || "—"}
       </TableCell>
-      <TableCell>{row.message_sent ? <Check className="h-4 w-4 text-green-600" /> : <XIcon className="h-4 w-4 text-muted-foreground" />}</TableCell>
+      <TableCell className="hidden sm:table-cell">{row.message_sent ? <Check className="h-4 w-4 text-green-600" /> : <XIcon className="h-4 w-4 text-muted-foreground" />}</TableCell>
       <TableCell>
         <div className="flex gap-1">
           <Button size="icon" variant="ghost" onClick={openWhatsApp} title="שלח WhatsApp">
@@ -484,9 +491,19 @@ function AddInviteeDialog({ onSaved }: { onSaved: () => void }) {
       toast.error("הזן שם או טלפון");
       return;
     }
-    const { error } = await db.from("invitees").insert({ full_name: name || null, phone: phone || null });
-    if (error) toast.error("שגיאה בהוספה");
+    const result = await insertInvitee({ full_name: name || null, phone: phone || null });
+    if ("error" in result) toast.error("שגיאה בהוספה");
     else {
+      try {
+        await notifyInviteeAdded({
+          inviteeId: result.id,
+          fullName: name,
+          phone,
+          source: "admin",
+        });
+      } catch {
+        // ההוספה הצליחה גם אם ההתראה נכשלה
+      }
       toast.success("נוסף");
       setOpen(false);
       setName(""); setPhone("");
@@ -531,9 +548,17 @@ function ImportPanel({ onImported }: { onImported: () => void }) {
       if (records.length === 0) {
         toast.error("לא נמצאו רשומות תקינות");
       } else {
-        const { error } = await db.from("invitees").insert(records);
+        const { data, error } = await db.from("invitees").insert(records).select("id, full_name, phone");
         if (error) toast.error("שגיאה בייבוא");
-        else { toast.success(`יובאו ${records.length} רשומות`); onImported(); }
+        else {
+          try {
+            await notifyInviteesAddedBatch(data ?? [], "import");
+          } catch {
+            // ייבוא הצליח גם בלי התראות
+          }
+          toast.success(`יובאו ${records.length} רשומות`);
+          onImported();
+        }
       }
     } catch (e) {
       toast.error("שגיאה בקריאת הקובץ");
@@ -554,9 +579,18 @@ function ImportPanel({ onImported }: { onImported: () => void }) {
       })
       .filter((r) => r.full_name || r.phone);
     if (!records.length) { toast.error("לא זוהו רשומות"); return; }
-    const { error } = await db.from("invitees").insert(records);
+    const { data, error } = await db.from("invitees").insert(records).select("id, full_name, phone");
     if (error) toast.error("שגיאה בשמירה");
-    else { toast.success(`נוספו ${records.length} רשומות`); setText(""); onImported(); }
+    else {
+      try {
+        await notifyInviteesAddedBatch(data ?? [], "import");
+      } catch {
+        // שמירה הצליחה גם בלי התראות
+      }
+      toast.success(`נוספו ${records.length} רשומות`);
+      setText("");
+      onImported();
+    }
   };
 
   return (
@@ -788,9 +822,15 @@ function CmsPanel({ settings, onSaved }: { settings: SiteSettings; onSaved: () =
         description="תמונות שמוצגות כרקע פסיפס בדף הבית."
         emptyHint="כאן יופיעו תמונות הרקע (קולאז')."
         images={collage}
-        onUpload={async (f) => {
-          const url = await upload(f);
-          if (url) { const next = [...collage, url]; setCollage(next); persist({ collage_images: next }); }
+        onUploadBatch={async (files) => {
+          const results = await Promise.all(files.map((f) => upload(f)));
+          const urls = results.filter((u): u is string => !!u);
+          if (urls.length) {
+            const next = [...collage, ...urls];
+            setCollage(next);
+            persist({ collage_images: next });
+            toast.success(`הועלו ${urls.length} תמונות`);
+          }
         }}
         onDelete={(url) => {
           const next = collage.filter((u) => u !== url);
@@ -803,9 +843,15 @@ function CmsPanel({ settings, onSaved }: { settings: SiteSettings; onSaved: () =
         description="תמונות שמוצגות בקרוסלה בתחתית דף הבית."
         emptyHint="כאן יופיעו תמונות הקרוסלה."
         images={carousel}
-        onUpload={async (f) => {
-          const url = await upload(f);
-          if (url) { const next = [...carousel, url]; setCarousel(next); persist({ carousel_images: next }); }
+        onUploadBatch={async (files) => {
+          const results = await Promise.all(files.map((f) => upload(f)));
+          const urls = results.filter((u): u is string => !!u);
+          if (urls.length) {
+            const next = [...carousel, ...urls];
+            setCarousel(next);
+            persist({ carousel_images: next });
+            toast.success(`הועלו ${urls.length} תמונות`);
+          }
         }}
         onDelete={(url) => {
           const next = carousel.filter((u) => u !== url);
@@ -817,29 +863,30 @@ function CmsPanel({ settings, onSaved }: { settings: SiteSettings; onSaved: () =
 }
 
 function ImageManager({
-  title, description, emptyHint, images, onUpload, onDelete,
+  title, description, emptyHint, images, onUploadBatch, onDelete,
 }: {
   title: string;
   description?: string;
   emptyHint?: string;
   images: string[];
-  onUpload: (f: File) => void | Promise<void>;
+  onUploadBatch: (files: File[]) => void | Promise<void>;
   onDelete: (url: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadCount, setUploadCount] = useState(0);
 
   const handleFiles = async (files: FileList | File[]) => {
     const list = Array.from(files);
     if (list.length === 0) return;
     setUploading(true);
+    setUploadCount(list.length);
     try {
-      for (const file of list) {
-        await onUpload(file);
-      }
+      await onUploadBatch(list);
     } finally {
       setUploading(false);
+      setUploadCount(0);
       if (inputRef.current) inputRef.current.value = "";
     }
   };
@@ -876,14 +923,16 @@ function ImageManager({
         >
           <Upload className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
           <p className="text-sm font-medium">
-            {uploading ? "מעלה תמונות..." : "גרור תמונות לכאן או לחץ לבחירה"}
+            {uploading
+              ? `מעלה ${uploadCount} תמונות במקביל...`
+              : "גרור תמונות לכאן או לחץ לבחירה (מרובות)"}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            JPG, PNG, WEBP, GIF, SVG, AVIF, HEIC, BMP, TIFF — עד 10MB
+            JPG, PNG, WEBP, GIF, SVG, AVIF, HEIC, BMP, TIFF — עד 10MB לכל קובץ
           </p>
         </div>
         <Button size="sm" variant="outline" disabled={uploading} onClick={() => inputRef.current?.click()}>
-          <Upload className="ms-1 h-4 w-4" /> {uploading ? "מעלה..." : "בחירת תמונות"}
+          <Upload className="ms-1 h-4 w-4" /> {uploading ? `מעלה ${uploadCount}...` : "בחירת תמונות"}
         </Button>
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
           {images.map((url) => (

@@ -87,7 +87,7 @@ export function AdminNotificationsBell() {
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-80 p-0" align="end" dir="rtl">
+        <PopoverContent className="w-[min(20rem,calc(100vw-2rem))] p-0" align="end" dir="rtl">
           <div className="border-b px-3 py-2">
             <p className="text-sm font-semibold">התראות אחרונות</p>
             {unread > 0 && (
@@ -119,7 +119,7 @@ export function AdminNotificationsBell() {
       </Popover>
 
       <Dialog open={allOpen} onOpenChange={setAllOpen}>
-        <DialogContent className="max-w-lg p-0" dir="rtl">
+        <DialogContent className="max-w-lg w-[calc(100vw-1.5rem)] p-0" dir="rtl">
           <DialogHeader className="border-b px-4 py-3">
             <DialogTitle>כל ההתראות</DialogTitle>
           </DialogHeader>
@@ -180,7 +180,7 @@ export function AdminGuestMessagesButton({
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg p-0" dir="rtl">
+        <DialogContent className="max-w-lg w-[calc(100vw-1.5rem)] p-0" dir="rtl">
           <DialogHeader className="border-b px-4 py-3">
             <DialogTitle>הודעות ושאלות ממוזמנים</DialogTitle>
           </DialogHeader>

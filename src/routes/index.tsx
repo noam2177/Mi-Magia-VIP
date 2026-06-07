@@ -63,7 +63,7 @@ function LandingPage() {
         <Lock className="h-4 w-4" />
       </Link>
 
-      <main className="relative z-10 mx-auto w-full max-w-3xl px-5 sm:px-8 py-12 sm:py-16 text-center">
+      <main className="relative z-10 mx-auto w-full max-w-3xl px-4 sm:px-8 py-10 sm:py-16 text-center">
         <header className="mb-10">
           <h1 className="text-3xl sm:text-5xl font-bold text-foreground drop-shadow-sm leading-tight">
             {title}

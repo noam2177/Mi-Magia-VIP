@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS public.admin_notifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   type text NOT NULL CHECK (type IN (
     'rsvp_attending', 'rsvp_not_attending', 'rsvp_updated',
-    'self_registration', 'guest_question'
+    'self_registration', 'guest_question', 'invite_added'
   )),
   invitee_id uuid REFERENCES public.invitees(id) ON DELETE SET NULL,
   title text NOT NULL,
