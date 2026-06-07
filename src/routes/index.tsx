@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { db } from "@/lib/db";
-import { LANDING_BODY_PARAGRAPHS } from "@/lib/landing-content";
 import { getEventNavigationUrl, getLandingParagraphs, parseSiteSettings, type SiteSettings } from "@/lib/site-settings";
 import { getRsvpSubmitted } from "@/lib/rsvp-storage";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Lock, Heart, Navigation, MapPin } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 
@@ -21,6 +21,7 @@ export const Route = createFileRoute("/")({
 const DEFAULT_SETTINGS = parseSiteSettings(null);
 
 function LandingPage() {
+  const pageRef = useRef<HTMLDivElement>(null);
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
   const [rsvpDone, setRsvpDone] = useState(false);
 
@@ -49,19 +50,9 @@ function LandingPage() {
   const googleUrl = settings.google_maps_url;
 
   return (
-    <div className="min-h-screen relative">
-      <div className="absolute inset-0 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1 opacity-40 pointer-events-none">
-        {collage.length > 0
-          ? collage.map((url, i) => (
-              <div
-                key={i}
-                className="aspect-square bg-cover bg-center"
-                style={{ backgroundImage: `url(${url})` }}
-              />
-            ))
-          : null}
-      </div>
-      <div className="absolute inset-0 bg-gradient-to-b from-white/75 via-white/70 to-white/92" />
+    <div ref={pageRef} className="min-h-screen relative">
+      <CollageBackground images={collage} pageRef={pageRef} />
+      <div className="absolute inset-0 bg-gradient-to-b from-white/75 via-white/70 to-white/92 pointer-events-none" />
 
       <Link
         to="/admin/login"
@@ -159,6 +150,109 @@ function LandingPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+function useGridCols() {
+  const [cols, setCols] = useState(3);
+  useEffect(() => {
+    const update = () => {
+      const w = window.innerWidth;
+      if (w >= 768) setCols(5);
+      else if (w >= 640) setCols(4);
+      else setCols(3);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  return cols;
+}
+
+function CollageBackground({
+  images,
+  pageRef,
+}: {
+  images: string[];
+  pageRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const cols = useGridCols();
+  const [pageHeight, setPageHeight] = useState(() =>
+    typeof window !== "undefined" ? window.innerHeight : 800,
+  );
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const el = pageRef.current;
+    if (!el) return;
+    const measure = () => {
+      setPageHeight(Math.max(el.offsetHeight, window.innerHeight));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [pageRef]);
+
+  const tileCount = useMemo(() => {
+    if (images.length === 0) return 0;
+    const gap = 4;
+    const width = typeof window !== "undefined" ? window.innerWidth : 390;
+    const cellSize = (width - gap * (cols - 1)) / cols;
+    const rows = Math.ceil(pageHeight / (cellSize + gap)) + 1;
+    return cols * rows;
+  }, [images.length, cols, pageHeight]);
+
+  const tiles = useMemo(() => {
+    if (images.length === 0) return [];
+    return Array.from({ length: tileCount }, (_, i) => ({
+      url: images[i % images.length],
+      key: `tile-${i}`,
+    }));
+  }, [images, tileCount]);
+
+  if (tiles.length === 0) return null;
+
+  return (
+    <>
+      <div
+        className="absolute inset-0 overflow-hidden opacity-40"
+        style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${cols}, 1fr)`,
+          gap: "4px",
+          alignContent: "start",
+        }}
+        aria-hidden={false}
+      >
+        {tiles.map((tile) => (
+          <button
+            key={tile.key}
+            type="button"
+            className="aspect-square w-full bg-cover bg-center cursor-pointer transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--pink-deep)]"
+            style={{ backgroundImage: `url(${tile.url})` }}
+            onClick={() => setLightboxUrl(tile.url)}
+            aria-label="הגדלת תמונה"
+          />
+        ))}
+      </div>
+
+      <Dialog open={!!lightboxUrl} onOpenChange={(open) => !open && setLightboxUrl(null)}>
+        <DialogContent className="max-w-[min(95vw,56rem)] border-none bg-black/90 p-2 sm:p-4 shadow-2xl">
+          {lightboxUrl && (
+            <img
+              src={lightboxUrl}
+              alt=""
+              className="mx-auto max-h-[85vh] w-full object-contain rounded-lg"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
