@@ -24,6 +24,8 @@ import { SLEEP_OPTIONS, getSleepLabel } from "@/lib/sleep-options";
 import { DEFAULT_BROADCAST_MESSAGE, formatBroadcastMessage, getInviteLink } from "@/lib/broadcast-message";
 import { parseSiteSettings, type FaqItem, type SiteSettings } from "@/lib/site-settings";
 import { LANDING_BODY_PARAGRAPHS } from "@/lib/landing-content";
+import { ACCEPTED_IMAGE_ACCEPT } from "@/lib/image-upload";
+import { uploadEventImageFile } from "@/lib/upload-event-image";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminPage,
@@ -549,11 +551,13 @@ function CmsPanel({ settings, onSaved }: { settings: SiteSettings; onSaved: () =
     });
 
   const upload = async (file: File): Promise<string | null> => {
-    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name.replace(/\s+/g, "_")}`;
-    const { error } = await db.storage.from("event-images").upload(path, file, { upsert: false });
-    if (error) { toast.error("העלאה נכשלה"); return null; }
-    const { data } = db.storage.from("event-images").getPublicUrl(path);
-    return data.publicUrl as string;
+    try {
+      return await uploadEventImageFile(file);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "העלאה נכשלה";
+      toast.error(msg);
+      return null;
+    }
   };
 
   return (
@@ -706,20 +710,68 @@ function ImageManager({
   description?: string;
   emptyHint?: string;
   images: string[];
-  onUpload: (f: File) => void;
+  onUpload: (f: File) => void | Promise<void>;
   onDelete: (url: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFiles = async (files: FileList | File[]) => {
+    const list = Array.from(files);
+    if (list.length === 0) return;
+    setUploading(true);
+    try {
+      for (const file of list) {
+        await onUpload(file);
+      }
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
   return (
     <Card>
       <CardHeader><CardTitle className="flex items-center gap-2"><ImageIcon className="h-4 w-4" /> {title}</CardTitle></CardHeader>
       <CardContent className="space-y-3">
         {description && <p className="text-sm text-muted-foreground">{description}</p>}
         <input
-          ref={inputRef} type="file" accept="image/*" className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); if (inputRef.current) inputRef.current.value = ""; }}
+          ref={inputRef}
+          type="file"
+          accept={ACCEPTED_IMAGE_ACCEPT}
+          multiple
+          className="hidden"
+          onChange={(e) => { if (e.target.files) void handleFiles(e.target.files); }}
         />
-        <Button size="sm" onClick={() => inputRef.current?.click()}><Upload className="ms-1 h-4 w-4" /> העלה תמונה</Button>
+        <div
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") inputRef.current?.click(); }}
+          onDragEnter={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={(e) => { e.preventDefault(); setDragging(false); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragging(false);
+            if (e.dataTransfer.files.length) void handleFiles(e.dataTransfer.files);
+          }}
+          onClick={() => !uploading && inputRef.current?.click()}
+          className={`rounded-lg border-2 border-dashed px-4 py-8 text-center transition cursor-pointer ${
+            dragging ? "border-primary bg-primary/5" : "border-muted-foreground/30 bg-muted/20 hover:bg-muted/30"
+          } ${uploading ? "opacity-60 pointer-events-none" : ""}`}
+        >
+          <Upload className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+          <p className="text-sm font-medium">
+            {uploading ? "מעלה תמונות..." : "גרור תמונות לכאן או לחץ לבחירה"}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            JPG, PNG, WEBP, GIF, SVG, AVIF, HEIC, BMP, TIFF — עד 10MB
+          </p>
+        </div>
+        <Button size="sm" variant="outline" disabled={uploading} onClick={() => inputRef.current?.click()}>
+          <Upload className="ms-1 h-4 w-4" /> {uploading ? "מעלה..." : "בחירת תמונות"}
+        </Button>
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
           {images.map((url) => (
             <div key={url} className="relative group aspect-square rounded-md overflow-hidden border">
@@ -733,9 +785,9 @@ function ImageManager({
               </button>
             </div>
           ))}
-          {images.length === 0 && (
-            <div className="col-span-full rounded-md border border-dashed bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
-              {emptyHint || "אין תמונות כרגע. אפשר להעלות מהכפתור למעלה."}
+          {images.length === 0 && !uploading && (
+            <div className="col-span-full rounded-md border border-dashed bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
+              {emptyHint || "אין תמונות כרגע. אפשר לגרור או לבחור מהכפתור למעלה."}
             </div>
           )}
         </div>
