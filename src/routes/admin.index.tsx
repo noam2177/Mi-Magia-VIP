@@ -28,6 +28,8 @@ import { parseSiteSettings, type FaqItem, type SiteSettings } from "@/lib/site-s
 import { LANDING_BODY_PARAGRAPHS } from "@/lib/landing-content";
 import { ACCEPTED_IMAGE_ACCEPT } from "@/lib/image-upload";
 import { uploadEventImageFile } from "@/lib/upload-event-image";
+import { AdminGuestMessagesButton, AdminNotificationsBell } from "@/components/admin-notifications-bell";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminPage,
@@ -43,6 +45,7 @@ type Invitee = {
   blessing: string | null;
   guest_question: string | null;
   message_sent: boolean;
+  is_self_registered?: boolean;
   created_at: string;
 };
 
@@ -129,6 +132,7 @@ function AdminPage() {
       .channel("admin-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "invitees" }, loadAll)
       .on("postgres_changes", { event: "*", schema: "public", table: "site_settings" }, loadAll)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "admin_notifications" }, loadAll)
       .subscribe();
     return () => {
       db.removeChannel(ch);
@@ -164,7 +168,9 @@ function AdminPage() {
       <header className="bg-white border-b sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <h1 className="text-xl font-bold">פאנל ניהול — דני תומר אפטר חתונה</h1>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <AdminNotificationsBell />
+            <AdminGuestMessagesButton invitees={list} />
             <BackToHomeLink />
             <Button variant="ghost" size="sm" onClick={() => { adminLogout(); navigate({ to: "/admin/login" }); }}>
               <LogOut className="ms-1 h-4 w-4" /> יציאה
@@ -397,9 +403,29 @@ function InviteeRow({
     );
   }
 
+  const hasQuestion = !!row.guest_question?.trim();
+
   return (
-    <TableRow>
-      <TableCell className="font-medium">{row.full_name || "—"}</TableCell>
+    <TableRow
+      className={cn(
+        hasQuestion && "bg-amber-50/80 border-r-4 border-r-amber-500",
+      )}
+    >
+      <TableCell className="font-medium">
+        <div className="flex items-center gap-2">
+          {row.full_name || "—"}
+          {hasQuestion && (
+            <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">
+              שאלה
+            </span>
+          )}
+          {row.is_self_registered && (
+            <span className="rounded-full bg-[color:var(--pink-deep)] px-2 py-0.5 text-[10px] font-bold text-white">
+              הרשמה
+            </span>
+          )}
+        </div>
+      </TableCell>
       <TableCell dir="ltr" className="text-start">{row.phone || "—"}</TableCell>
       <TableCell>
         {row.status === "attending" && <span className="text-green-700">מגיע</span>}
@@ -409,7 +435,15 @@ function InviteeRow({
       <TableCell>{row.guests}</TableCell>
       <TableCell className="max-w-[12rem] truncate" title={getSleepLabel(row.sleep)}>{getSleepLabel(row.sleep)}</TableCell>
       <TableCell className="max-w-xs truncate" title={row.blessing ?? ""}>{row.blessing || "—"}</TableCell>
-      <TableCell className="max-w-xs truncate" title={row.guest_question ?? ""}>{row.guest_question || "—"}</TableCell>
+      <TableCell
+        className={cn(
+          "max-w-xs truncate",
+          hasQuestion && "font-semibold text-amber-900",
+        )}
+        title={row.guest_question ?? ""}
+      >
+        {row.guest_question || "—"}
+      </TableCell>
       <TableCell>{row.message_sent ? <Check className="h-4 w-4 text-green-600" /> : <XIcon className="h-4 w-4 text-muted-foreground" />}</TableCell>
       <TableCell>
         <div className="flex gap-1">

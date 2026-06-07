@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { SLEEP_OPTIONS } from "@/lib/sleep-options";
 import { FAQ_QUESTIONS } from "@/lib/faq-questions";
 import { parseSiteSettings, type FaqItem } from "@/lib/site-settings";
+import { notifyRsvpSubmit, notifySelfRegistration } from "@/lib/notifications";
 import { markRsvpSubmitted } from "@/lib/rsvp-storage";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -19,7 +20,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Heart, ChevronDown } from "lucide-react";
+import { Heart, ChevronDown, UserPlus } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/rsvp")({
@@ -54,6 +56,19 @@ const schema = z
 
 type FormValues = z.input<typeof schema>;
 
+const registerSchema = z.object({
+  full_name: z.string().trim().min(2, "יש להזין שם מלא").max(100),
+  phone: z
+    .string()
+    .trim()
+    .min(9, "יש להזין טלפון")
+    .max(20)
+    .regex(/^[0-9+\-\s()]*$/u, "מספר טלפון לא תקין"),
+  guests: z.coerce.number().min(1).max(5).default(1),
+});
+
+type RegisterValues = z.input<typeof registerSchema>;
+
 const PINK_GRADIENT =
   "linear-gradient(135deg, oklch(0.98 0.02 350) 0%, oklch(0.94 0.05 350) 100%)";
 
@@ -64,6 +79,7 @@ function RsvpPage() {
     FAQ_QUESTIONS.map((f) => ({ question: f.question, answer: f.answer })),
   );
   const [faqOpen, setFaqOpen] = useState(false);
+  const [registering, setRegistering] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -87,6 +103,57 @@ function RsvpPage() {
   });
 
   const status = form.watch("status");
+
+  const registerForm = useForm<RegisterValues>({
+    resolver: zodResolver(registerSchema) as any,
+    defaultValues: { full_name: "", phone: "", guests: 1 },
+  });
+
+  const onRegister = async (values: RegisterValues) => {
+    setRegistering(true);
+    try {
+      const { data: existing } = await db
+        .from("invitees")
+        .select("id")
+        .or(`phone.eq.${values.phone},full_name.eq.${values.full_name}`)
+        .limit(1)
+        .maybeSingle();
+
+      if (existing?.id) {
+        toast.error("כבר קיימת רשומה עם שם או טלפון זה");
+        return;
+      }
+
+      const { data, error } = await db
+        .from("invitees")
+        .insert({
+          full_name: values.full_name,
+          phone: values.phone,
+          guests: values.guests,
+          is_self_registered: true,
+        })
+        .select("id")
+        .single();
+
+      if (error) throw error;
+
+      await notifySelfRegistration({
+        inviteeId: data.id,
+        fullName: values.full_name,
+        phone: values.phone,
+        guests: values.guests,
+      });
+
+      toast.success("נרשמתם בהצלחה! נשמח לראותכם 💗");
+      registerForm.reset();
+      navigate({ to: "/" });
+    } catch (e) {
+      console.error(e);
+      toast.error("שגיאה בהרשמה. נסו שוב.");
+    } finally {
+      setRegistering(false);
+    }
+  };
 
   const onSubmit = async (values: FormValues) => {
     setSubmitting(true);
@@ -131,7 +198,20 @@ function RsvpPage() {
         id = data.id;
       }
 
-      if (id) markRsvpSubmitted(id);
+      if (id) {
+        markRsvpSubmitted(id);
+        await notifyRsvpSubmit({
+          inviteeId: id,
+          fullName: values.full_name,
+          phone: values.phone,
+          status: values.status,
+          guests: values.status === "attending" ? values.guests : 1,
+          sleepLabel,
+          blessing: values.blessing,
+          guestQuestion: values.guest_question,
+          isUpdate: !!existingId,
+        });
+      }
       toast.success("תודה! האישור נשלח ✨");
       navigate({ to: "/" });
     } catch (e: any) {
@@ -160,6 +240,56 @@ function RsvpPage() {
             <DialogDescription className="text-center">נשמח לדעת אם אתם מגיעים 💗</DialogDescription>
           </DialogHeader>
 
+          <Tabs defaultValue="rsvp" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="rsvp">אישור הגעה</TabsTrigger>
+              <TabsTrigger value="register" className="gap-1">
+                <UserPlus className="h-3.5 w-3.5" />
+                הרשמה
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="register">
+              <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-4">
+                <p className="text-sm text-muted-foreground text-center">
+                  לא ברשימה? הרשמו עם שם, טלפון ומספר אורחים
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="reg_name">שם מלא</Label>
+                  <Input id="reg_name" {...registerForm.register("full_name")} placeholder="לדוגמה: דנה כהן" />
+                  {registerForm.formState.errors.full_name && (
+                    <p className="text-sm text-destructive">{registerForm.formState.errors.full_name.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reg_phone">טלפון</Label>
+                  <Input id="reg_phone" {...registerForm.register("phone")} placeholder="050-0000000" />
+                  {registerForm.formState.errors.phone && (
+                    <p className="text-sm text-destructive">{registerForm.formState.errors.phone.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label>כמות אורחים</Label>
+                  <Select defaultValue="1" onValueChange={(v) => registerForm.setValue("guests", Number(v))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <SelectItem key={n} value={String(n)}>
+                          {n}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button type="submit" disabled={registering} className="w-full">
+                  {registering ? "נרשם..." : "הרשמה לרשימה"}
+                </Button>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="rsvp">
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="full_name">שם מלא</Label>
@@ -252,8 +382,10 @@ function RsvpPage() {
               {submitting ? "שולח..." : "שליחה"}
             </Button>
           </form>
+            </TabsContent>
+          </Tabs>
 
-          <div className="border-t pt-3">
+          <div className="border-t pt-3 mt-4">
             <Collapsible open={faqOpen} onOpenChange={setFaqOpen}>
               <CollapsibleTrigger asChild>
                 <Button
