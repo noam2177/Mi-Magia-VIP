@@ -183,7 +183,6 @@ function CollageBackground({
   const [pageHeight, setPageHeight] = useState(() =>
     typeof window !== "undefined" ? window.innerHeight : 800,
   );
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const el = pageRef.current;
@@ -221,46 +220,46 @@ function CollageBackground({
   if (tiles.length === 0) return null;
 
   return (
-    <>
-      <div
-        className="absolute inset-0 overflow-hidden opacity-40"
-        style={{
-          display: "grid",
-          gridTemplateColumns: `repeat(${cols}, 1fr)`,
-          gap: "4px",
-          alignContent: "start",
-        }}
-        aria-hidden={false}
-      >
-        {tiles.map((tile) => (
-          <button
-            key={tile.key}
-            type="button"
-            className="aspect-square w-full bg-cover bg-center cursor-pointer transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--pink-deep)]"
-            style={{ backgroundImage: `url(${tile.url})` }}
-            onClick={() => setLightboxUrl(tile.url)}
-            aria-label="הגדלת תמונה"
-          />
-        ))}
-      </div>
+    <div
+      className="absolute inset-0 overflow-hidden opacity-40 pointer-events-none"
+      style={{
+        display: "grid",
+        gridTemplateColumns: `repeat(${cols}, 1fr)`,
+        gap: "4px",
+        alignContent: "start",
+      }}
+      aria-hidden
+    >
+      {tiles.map((tile) => (
+        <div
+          key={tile.key}
+          className="aspect-square w-full bg-cover bg-center"
+          style={{ backgroundImage: `url(${tile.url})` }}
+        />
+      ))}
+    </div>
+  );
+}
 
-      <Dialog open={!!lightboxUrl} onOpenChange={(open) => !open && setLightboxUrl(null)}>
-        <DialogContent className="max-w-[min(95vw,56rem)] border-none bg-black/90 p-2 sm:p-4 shadow-2xl">
-          {lightboxUrl && (
-            <img
-              src={lightboxUrl}
-              alt=""
-              className="mx-auto max-h-[85vh] w-full object-contain rounded-lg"
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+function ImageLightbox({ url, onClose }: { url: string | null; onClose: () => void }) {
+  return (
+    <Dialog open={!!url} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-[min(95vw,56rem)] border-none bg-black/90 p-2 sm:p-4 shadow-2xl">
+        {url && (
+          <img
+            src={url}
+            alt=""
+            className="mx-auto max-h-[85vh] w-full object-contain rounded-lg"
+          />
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
 function Carousel({ images }: { images: string[] }) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, direction: "rtl" });
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!emblaApi) return;
@@ -269,14 +268,24 @@ function Carousel({ images }: { images: string[] }) {
   }, [emblaApi]);
 
   return (
-    <div className="overflow-hidden rounded-2xl shadow-xl" ref={emblaRef}>
-      <div className="flex">
-        {images.map((url, i) => (
-          <div key={i} className="min-w-0 flex-[0_0_100%]">
-            <div className="aspect-[16/9] bg-cover bg-center" style={{ backgroundImage: `url(${url})` }} />
-          </div>
-        ))}
+    <>
+      <div className="overflow-hidden rounded-2xl shadow-xl" ref={emblaRef}>
+        <div className="flex">
+          {images.map((url, i) => (
+            <div key={i} className="min-w-0 flex-[0_0_100%]">
+              <button
+                type="button"
+                className="block w-full aspect-[16/9] bg-cover bg-center cursor-pointer transition-opacity hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--pink-deep)]"
+                style={{ backgroundImage: `url(${url})` }}
+                onClick={() => setLightboxUrl(url)}
+                aria-label={`הגדלת תמונה ${i + 1}`}
+              />
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+      <p className="mt-2 text-xs text-muted-foreground text-center">לחצו על תמונה להגדלה</p>
+      <ImageLightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />
+    </>
   );
 }

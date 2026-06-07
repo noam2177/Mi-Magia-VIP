@@ -10,7 +10,7 @@ import { SLEEP_OPTIONS } from "@/lib/sleep-options";
 import { FAQ_QUESTIONS } from "@/lib/faq-questions";
 import { parseSiteSettings, type FaqItem } from "@/lib/site-settings";
 import { findInviteeId, insertInvitee } from "@/lib/invitees-db";
-import { notifyRsvpSubmit, notifySelfRegistration } from "@/lib/notifications";
+import { notifyNewInviteeCreated, notifyRsvpSubmit, notifySelfRegistration } from "@/lib/notifications";
 import { markRsvpSubmitted } from "@/lib/rsvp-storage";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -66,6 +66,10 @@ const registerSchema = z.object({
     .max(20)
     .regex(/^[0-9+\-\s()]*$/u, "מספר טלפון לא תקין"),
   guests: z.coerce.number().min(1).max(5).default(1),
+  status: z.enum(["attending", "not_attending"]).optional(),
+  sleep_option: z.string().optional(),
+  blessing: z.string().trim().max(500).optional(),
+  guest_question: z.string().trim().max(500).optional(),
 });
 
 type RegisterValues = z.input<typeof registerSchema>;
@@ -107,8 +111,17 @@ function RsvpPage() {
 
   const registerForm = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema) as any,
-    defaultValues: { full_name: "", phone: "", guests: 1 },
+    defaultValues: {
+      full_name: "",
+      phone: "",
+      guests: 1,
+      sleep_option: "",
+      blessing: "",
+      guest_question: "",
+    },
   });
+
+  const registerStatus = registerForm.watch("status");
 
   const onRegister = async (values: RegisterValues) => {
     setRegistering(true);
@@ -119,11 +132,21 @@ function RsvpPage() {
         return;
       }
 
+      const sleepLabel =
+        values.status === "attending" && values.sleep_option
+          ? SLEEP_OPTIONS.find((o) => o.value === values.sleep_option)?.label ?? values.sleep_option
+          : null;
+
       const result = await insertInvitee({
         full_name: values.full_name.trim(),
         phone: values.phone.trim(),
-        guests: values.guests,
+        guests: values.status === "attending" ? values.guests : 1,
+        status: values.status ?? null,
+        sleep: sleepLabel,
+        blessing: values.blessing || null,
+        guest_question: values.guest_question || null,
         is_self_registered: true,
+        responded_at: values.status ? new Date().toISOString() : null,
       });
 
       if ("error" in result) {
@@ -133,11 +156,21 @@ function RsvpPage() {
       }
 
       try {
+        await notifyNewInviteeCreated({
+          inviteeId: result.id,
+          fullName: values.full_name,
+          phone: values.phone,
+          source: "self_registration",
+        });
         await notifySelfRegistration({
           inviteeId: result.id,
           fullName: values.full_name,
           phone: values.phone,
           guests: values.guests,
+          status: values.status ?? null,
+          sleepLabel,
+          blessing: values.blessing,
+          guestQuestion: values.guest_question,
         });
       } catch (notifyErr) {
         console.warn("[register] notification failed", notifyErr);
@@ -188,17 +221,25 @@ function RsvpPage() {
       if (id) {
         markRsvpSubmitted(id);
         try {
-        await notifyRsvpSubmit({
-          inviteeId: id,
-          fullName: values.full_name,
-          phone: values.phone,
-          status: values.status,
-          guests: values.status === "attending" ? values.guests : 1,
-          sleepLabel,
-          blessing: values.blessing,
-          guestQuestion: values.guest_question,
-          isUpdate: !!existingId,
-        });
+          if (!existingId) {
+            await notifyNewInviteeCreated({
+              inviteeId: id,
+              fullName: values.full_name,
+              phone: values.phone,
+              source: "rsvp",
+            });
+          }
+          await notifyRsvpSubmit({
+            inviteeId: id,
+            fullName: values.full_name,
+            phone: values.phone,
+            status: values.status,
+            guests: values.status === "attending" ? values.guests : 1,
+            sleepLabel,
+            blessing: values.blessing,
+            guestQuestion: values.guest_question,
+            isUpdate: !!existingId,
+          });
         } catch (notifyErr) {
           console.warn("[rsvp] notification failed", notifyErr);
         }
@@ -243,7 +284,7 @@ function RsvpPage() {
             <TabsContent value="register">
               <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-4">
                 <p className="text-sm text-muted-foreground text-center">
-                  לא ברשימה? הרשמו עם שם, טלפון ומספר אורחים
+                  לא ברשימה? הרשמו וסמנו פרטי הגעה, לינה ושאלות
                 </p>
                 <div className="space-y-2">
                   <Label htmlFor="reg_name">שם מלא</Label>
@@ -259,21 +300,79 @@ function RsvpPage() {
                     <p className="text-sm text-destructive">{registerForm.formState.errors.phone.message}</p>
                   )}
                 </div>
+
                 <div className="space-y-2">
-                  <Label>כמות אורחים</Label>
-                  <Select defaultValue="1" onValueChange={(v) => registerForm.setValue("guests", Number(v))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5].map((n) => (
-                        <SelectItem key={n} value={String(n)}>
-                          {n}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>הגעה (אופציונלי)</Label>
+                  <RadioGroup
+                    onValueChange={(v) =>
+                      registerForm.setValue("status", v as "attending" | "not_attending")
+                    }
+                    className="flex gap-4"
+                    dir="rtl"
+                  >
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="attending" id="reg_att" />
+                      <Label htmlFor="reg_att">מגיע</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="not_attending" id="reg_nat" />
+                      <Label htmlFor="reg_nat">לא מגיע</Label>
+                    </div>
+                  </RadioGroup>
                 </div>
+
+                {registerStatus === "attending" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>כמות אורחים</Label>
+                      <Select defaultValue="1" onValueChange={(v) => registerForm.setValue("guests", Number(v))}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <SelectItem key={n} value={String(n)}>
+                              {n}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>אפשרויות לינה</Label>
+                      <Select onValueChange={(v) => registerForm.setValue("sleep_option", v)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="בחרו אפשרות לינה" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SLEEP_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="reg_blessing">ברכה קצרה</Label>
+                  <Textarea id="reg_blessing" {...registerForm.register("blessing")} rows={2} placeholder="מאחלים לכם..." />
+                </div>
+
+                <div className="space-y-2 border-t pt-4">
+                  <Label htmlFor="reg_question">יש לכם שאלה? כתבו לנו</Label>
+                  <Textarea
+                    id="reg_question"
+                    {...registerForm.register("guest_question")}
+                    rows={2}
+                    placeholder="נשמח לענות על כל שאלה..."
+                    className="resize-none"
+                  />
+                </div>
+
                 <Button type="submit" disabled={registering} className="w-full">
                   {registering ? "נרשם..." : "הרשמה לרשימה"}
                 </Button>

@@ -133,11 +133,18 @@ export async function notifyInviteeAdded(params: {
   inviteeId: string;
   fullName?: string | null;
   phone?: string | null;
-  source?: "admin" | "import";
+  source?: "admin" | "import" | "rsvp" | "self_registration";
   batchCount?: number;
 }) {
   const name = displayName(params.fullName, params.phone);
-  const sourceLabel = params.source === "import" ? "ייבוא" : "פאנל ניהול";
+  const sourceLabel =
+    params.source === "import"
+      ? "ייבוא"
+      : params.source === "rsvp"
+        ? "אישור הגעה"
+        : params.source === "self_registration"
+          ? "הרשמה עצמית"
+          : "פאנל ניהול";
 
   if (params.batchCount && params.batchCount > 1 && !params.fullName && !params.phone) {
     await pushNotification({
@@ -191,14 +198,52 @@ export async function notifySelfRegistration(params: {
   fullName: string;
   phone: string;
   guests: number;
+  status?: "attending" | "not_attending" | null;
+  sleepLabel?: string | null;
+  blessing?: string | null;
+  guestQuestion?: string | null;
 }) {
   const name = displayName(params.fullName, params.phone);
+  const details: string[] = [`טלפון: ${params.phone}`, `אורחים: ${params.guests}`];
+
+  if (params.status === "attending") {
+    details.push("מגיע/ה");
+    if (params.sleepLabel) details.push(`לינה: ${params.sleepLabel}`);
+  } else if (params.status === "not_attending") {
+    details.push("לא מגיע/ה");
+  }
+  if (params.blessing?.trim()) details.push(`ברכה: ${params.blessing.trim()}`);
+
   await pushNotification({
     type: "self_registration",
     invitee_id: params.inviteeId,
     title: `הרשמה חדשה: ${name}`,
-    body: `טלפון: ${params.phone} · אורחים: ${params.guests}`,
-    meta: { phone: params.phone, guests: params.guests },
+    body: details.join(" · "),
+    meta: { phone: params.phone, guests: params.guests, status: params.status },
+  });
+
+  if (params.guestQuestion?.trim()) {
+    await pushNotification({
+      type: "guest_question",
+      invitee_id: params.inviteeId,
+      title: `שאלה חדשה מ${name}`,
+      body: params.guestQuestion.trim(),
+      meta: { question: params.guestQuestion.trim() },
+    });
+  }
+}
+
+export async function notifyNewInviteeCreated(params: {
+  inviteeId: string;
+  fullName?: string | null;
+  phone?: string | null;
+  source: "rsvp" | "self_registration";
+}) {
+  await notifyInviteeAdded({
+    inviteeId: params.inviteeId,
+    fullName: params.fullName,
+    phone: params.phone,
+    source: params.source,
   });
 }
 
