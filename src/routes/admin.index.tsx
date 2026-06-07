@@ -3,7 +3,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { db } from "@/lib/db";
+import { bootstrapDatabase } from "@/lib/api/admin.functions";
 import { getAdminSession, adminLogout } from "@/lib/admin-session";
+import { isSchemaMissingError } from "@/lib/db-errors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,6 +54,8 @@ function AdminPage() {
   const [list, setList] = useState<Invitee[]>([]);
   const [search, setSearch] = useState("");
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
+  const [schemaError, setSchemaError] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(false);
 
   useEffect(() => {
     if (!getAdminSession()) {
@@ -61,10 +65,49 @@ function AdminPage() {
     setAuthChecked(true);
   }, [navigate]);
 
-  const loadAll = async () => {
-    const { data } = await db.from("invitees").select("*").order("created_at", { ascending: false });
+  const loadAll = async (tryBootstrap = true) => {
+    const { data, error: inviteesError } = await db
+      .from("invitees")
+      .select("*")
+      .order("created_at", { ascending: false });
+    const { data: s, error: settingsError } = await db
+      .from("site_settings")
+      .select("*")
+      .eq("id", 1)
+      .maybeSingle();
+
+    if (
+      tryBootstrap &&
+      (isSchemaMissingError(inviteesError) || isSchemaMissingError(settingsError))
+    ) {
+      const session = getAdminSession();
+      if (session?.name) {
+        try {
+          setBootstrapping(true);
+          await bootstrapDatabase({ data: { adminName: session.name } });
+          toast.success("מסד הנתונים הוקם בהצלחה");
+          setSchemaError(false);
+          return loadAll(false);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "הקמת מסד הנתונים נכשלה";
+          toast.error(msg);
+          setSchemaError(true);
+          return;
+        } finally {
+          setBootstrapping(false);
+        }
+      }
+      setSchemaError(true);
+      return;
+    }
+
+    if (inviteesError || settingsError) {
+      setSchemaError(true);
+      return;
+    }
+
+    setSchemaError(false);
     if (data) setList(data as Invitee[]);
-    const { data: s } = await db.from("site_settings").select("*").eq("id", 1).maybeSingle();
     setSettings(parseSiteSettings(s ?? null));
   };
 
@@ -120,6 +163,31 @@ function AdminPage() {
       </header>
 
       <main className="max-w-7xl mx-auto p-4 space-y-6">
+        {(schemaError || bootstrapping) && (
+          <Card className="border-amber-300 bg-amber-50">
+            <CardContent className="pt-4 space-y-2 text-sm">
+              {bootstrapping ? (
+                <p>מקים את מסד הנתונים...</p>
+              ) : (
+                <>
+                  <p className="font-medium">טבלאות Supabase חסרות (שגיאת 404).</p>
+                  <p className="text-muted-foreground">
+                    פתח Supabase → SQL Editor והרץ את הקובץ{" "}
+                    <code className="px-1 bg-white rounded">supabase/setup-all.sql</code>
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => loadAll(true)}
+                  >
+                    נסה הקמה אוטומטית
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Metrics */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <Metric label="סה״כ מוזמנים" value={metrics.total} />
