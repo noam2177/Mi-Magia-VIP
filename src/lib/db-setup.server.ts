@@ -15,7 +15,7 @@ export async function runDatabaseSetup(): Promise<{ ok: true } | { ok: false; re
     return { ok: false, reason: "missing_db_url" };
   }
 
-  const { default: pg } = await import("pg");
+  const { default: pg } = (await import("pg")) as any;
   const client = new pg.Client({
     connectionString: dbUrl,
     ssl: dbUrl.includes("localhost") ? undefined : { rejectUnauthorized: false },

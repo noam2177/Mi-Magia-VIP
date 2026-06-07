@@ -64,6 +64,10 @@ export const uploadEventImage = createServerFn({ method: "POST" })
 
     if (error) throw new Error(error.message);
 
-    const { data: urlData } = supabaseAdmin.storage.from(EVENT_IMAGES_BUCKET).getPublicUrl(path);
-    return { publicUrl: urlData.publicUrl };
+    // bucket פרטי — מחזירים signed URL לטווח ארוך (10 שנים)
+    const { data: signed, error: signError } = await supabaseAdmin.storage
+      .from(EVENT_IMAGES_BUCKET)
+      .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+    if (signError) throw new Error(signError.message);
+    return { publicUrl: signed.signedUrl };
   });

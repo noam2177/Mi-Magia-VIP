@@ -14,7 +14,90 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      invitees: {
+        Row: {
+          blessing: string | null
+          created_at: string | null
+          full_name: string | null
+          guest_question: string | null
+          guests: number | null
+          id: string
+          message_sent: boolean | null
+          phone: string | null
+          responded_at: string | null
+          sleep: string | null
+          status: string | null
+        }
+        Insert: {
+          blessing?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          guest_question?: string | null
+          guests?: number | null
+          id?: string
+          message_sent?: boolean | null
+          phone?: string | null
+          responded_at?: string | null
+          sleep?: string | null
+          status?: string | null
+        }
+        Update: {
+          blessing?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          guest_question?: string | null
+          guests?: number | null
+          id?: string
+          message_sent?: boolean | null
+          phone?: string | null
+          responded_at?: string | null
+          sleep?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      site_settings: {
+        Row: {
+          broadcast_message: string | null
+          carousel_images: Json | null
+          collage_images: Json | null
+          faq_items: Json | null
+          google_maps_url: string | null
+          id: number
+          landing_body: string | null
+          landing_title: string | null
+          main_text: string | null
+          navigation_url: string | null
+          waze_url: string | null
+        }
+        Insert: {
+          broadcast_message?: string | null
+          carousel_images?: Json | null
+          collage_images?: Json | null
+          faq_items?: Json | null
+          google_maps_url?: string | null
+          id?: number
+          landing_body?: string | null
+          landing_title?: string | null
+          main_text?: string | null
+          navigation_url?: string | null
+          waze_url?: string | null
+        }
+        Update: {
+          broadcast_message?: string | null
+          carousel_images?: Json | null
+          collage_images?: Json | null
+          faq_items?: Json | null
+          google_maps_url?: string | null
+          id?: number
+          landing_body?: string | null
+          landing_title?: string | null
+          main_text?: string | null
+          navigation_url?: string | null
+          waze_url?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

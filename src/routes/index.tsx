@@ -25,7 +25,7 @@ function LandingPage() {
   const [rsvpDone, setRsvpDone] = useState(false);
 
   useEffect(() => {
-    setRsvpDone(getRsvpSubmitted());
+    setRsvpDone(Boolean(getRsvpSubmitted()));
     const load = async () => {
       const { data } = await db.from("site_settings").select("*").eq("id", 1).maybeSingle();
       setSettings(parseSiteSettings(data ?? null));
