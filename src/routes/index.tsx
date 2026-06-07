@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { db } from "@/lib/db";
 import { getEventNavigationUrl, getLandingParagraphs, parseSiteSettings, type SiteSettings } from "@/lib/site-settings";
 import { getRsvpSubmitted } from "@/lib/rsvp-storage";
+import { FloralTextFrame } from "@/components/floral-text-frame";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Lock, Heart, Navigation, MapPin } from "lucide-react";
@@ -126,18 +127,20 @@ function LandingPage() {
           )}
         </header>
 
-        <section
-          aria-label="פרטי האירוע"
-          className="rounded-2xl border border-[color:var(--pink-deep)]/15 bg-white/85 backdrop-blur-sm shadow-sm px-5 sm:px-8 py-7 sm:py-9 text-start"
-        >
-          <div className="space-y-4 text-[15px] sm:text-base leading-relaxed text-foreground/90">
-            {bodyParagraphs.map((paragraph, i) => (
-              <p key={i} className={i === 0 ? "text-lg sm:text-xl font-semibold text-center" : undefined}>
-                {paragraph}
-              </p>
-            ))}
-          </div>
-        </section>
+        <FloralTextFrame>
+          <section
+            aria-label="פרטי האירוע"
+            className="rounded-2xl border border-[color:var(--pink-deep)]/10 bg-white/88 backdrop-blur-sm shadow-sm px-5 sm:px-8 py-7 sm:py-9 text-start"
+          >
+            <div className="space-y-4 text-[15px] sm:text-base leading-relaxed text-foreground/90">
+              {bodyParagraphs.map((paragraph, i) => (
+                <p key={i} className={i === 0 ? "text-lg sm:text-xl font-semibold text-center" : undefined}>
+                  {paragraph}
+                </p>
+              ))}
+            </div>
+          </section>
+        </FloralTextFrame>
 
         <section aria-label="גלריית תמונות" className="mt-12 sm:mt-16 pb-8">
           {carousel.length > 0 ? (
