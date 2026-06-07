@@ -130,7 +130,7 @@ function LandingPage() {
         <FloralTextFrame>
           <section
             aria-label="פרטי האירוע"
-            className="rounded-2xl border border-[color:var(--pink-deep)]/10 bg-white/88 backdrop-blur-sm shadow-sm px-5 sm:px-8 py-7 sm:py-9 text-start"
+            className="rounded-2xl border-2 border-[color:var(--pink-deep)]/20 bg-white/92 backdrop-blur-sm shadow-md px-5 sm:px-8 py-7 sm:py-9 text-start"
           >
             <div className="space-y-4 text-[15px] sm:text-base leading-relaxed text-foreground/90">
               {bodyParagraphs.map((paragraph, i) => (

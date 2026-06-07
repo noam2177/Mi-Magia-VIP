@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { SLEEP_OPTIONS } from "@/lib/sleep-options";
 import { FAQ_QUESTIONS } from "@/lib/faq-questions";
 import { parseSiteSettings, type FaqItem } from "@/lib/site-settings";
+import { findInviteeId, insertInvitee } from "@/lib/invitees-db";
 import { notifyRsvpSubmit, notifySelfRegistration } from "@/lib/notifications";
 import { markRsvpSubmitted } from "@/lib/rsvp-storage";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -112,37 +113,35 @@ function RsvpPage() {
   const onRegister = async (values: RegisterValues) => {
     setRegistering(true);
     try {
-      const { data: existing } = await db
-        .from("invitees")
-        .select("id")
-        .or(`phone.eq.${values.phone},full_name.eq.${values.full_name}`)
-        .limit(1)
-        .maybeSingle();
-
-      if (existing?.id) {
-        toast.error("כבר קיימת רשומה עם שם או טלפון זה");
+      const existingId = await findInviteeId(values.phone, values.full_name);
+      if (existingId) {
+        toast.error("כבר קיימת רשומה עם שם או טלפון זה — אפשר לעבור לטאב אישור הגעה");
         return;
       }
 
-      const { data, error } = await db
-        .from("invitees")
-        .insert({
-          full_name: values.full_name,
+      const result = await insertInvitee({
+        full_name: values.full_name.trim(),
+        phone: values.phone.trim(),
+        guests: values.guests,
+        is_self_registered: true,
+      });
+
+      if ("error" in result) {
+        console.error("[register]", result.error);
+        toast.error("שגיאה בהרשמה. ודאו שם וטלפון תקינים ונסו שוב.");
+        return;
+      }
+
+      try {
+        await notifySelfRegistration({
+          inviteeId: result.id,
+          fullName: values.full_name,
           phone: values.phone,
           guests: values.guests,
-          is_self_registered: true,
-        })
-        .select("id")
-        .single();
-
-      if (error) throw error;
-
-      await notifySelfRegistration({
-        inviteeId: data.id,
-        fullName: values.full_name,
-        phone: values.phone,
-        guests: values.guests,
-      });
+        });
+      } catch (notifyErr) {
+        console.warn("[register] notification failed", notifyErr);
+      }
 
       toast.success("נרשמתם בהצלחה! נשמח לראותכם 💗");
       registerForm.reset();
@@ -158,19 +157,7 @@ function RsvpPage() {
   const onSubmit = async (values: FormValues) => {
     setSubmitting(true);
     try {
-      const orParts: string[] = [];
-      if (values.phone) orParts.push(`phone.eq.${values.phone}`);
-      if (values.full_name) orParts.push(`full_name.eq.${values.full_name}`);
-      let existingId: string | null = null;
-      if (orParts.length) {
-        const { data: existing } = await db
-          .from("invitees")
-          .select("id")
-          .or(orParts.join(","))
-          .limit(1)
-          .maybeSingle();
-        existingId = existing?.id ?? null;
-      }
+      const existingId = await findInviteeId(values.phone, values.full_name);
 
       const sleepLabel =
         values.status === "attending" && values.sleep_option
@@ -193,13 +180,14 @@ function RsvpPage() {
         const { error } = await db.from("invitees").update(payload).eq("id", existingId);
         if (error) throw error;
       } else {
-        const { data, error } = await db.from("invitees").insert(payload).select("id").single();
-        if (error) throw error;
-        id = data.id;
+        const created = await insertInvitee(payload);
+        if ("error" in created) throw new Error(created.error);
+        id = created.id;
       }
 
       if (id) {
         markRsvpSubmitted(id);
+        try {
         await notifyRsvpSubmit({
           inviteeId: id,
           fullName: values.full_name,
@@ -211,6 +199,9 @@ function RsvpPage() {
           guestQuestion: values.guest_question,
           isUpdate: !!existingId,
         });
+        } catch (notifyErr) {
+          console.warn("[rsvp] notification failed", notifyErr);
+        }
       }
       toast.success("תודה! האישור נשלח ✨");
       navigate({ to: "/" });
