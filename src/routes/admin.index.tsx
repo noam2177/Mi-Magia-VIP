@@ -113,7 +113,18 @@ function AdminPage() {
 
   useEffect(() => {
     if (!authChecked) return;
-    loadAll();
+    const init = async () => {
+      const session = getAdminSession();
+      if (session?.name) {
+        try {
+          await bootstrapDatabase({ data: { adminName: session.name } });
+        } catch {
+          // bucket/db bootstrap — loadAll יציג שגיאות אם עדיין חסר
+        }
+      }
+      await loadAll();
+    };
+    void init();
     const ch = db
       .channel("admin-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "invitees" }, loadAll)

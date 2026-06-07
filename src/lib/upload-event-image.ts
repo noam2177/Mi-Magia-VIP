@@ -1,6 +1,5 @@
 import { uploadEventImage } from "@/lib/api/admin.functions";
 import { getAdminSession } from "@/lib/admin-session";
-import { db } from "@/lib/db";
 import {
   buildStoragePath,
   fileToBase64,
@@ -13,34 +12,33 @@ export async function uploadEventImageFile(file: File): Promise<string> {
     throw new Error("סוג קובץ לא נתמך. ניתן להעלות JPG, PNG, WEBP, GIF, SVG, AVIF, HEIC, BMP או TIFF.");
   }
 
-  const contentType = getImageContentType(file);
-  const path = buildStoragePath(file);
   const session = getAdminSession();
-
-  if (session?.name) {
-    try {
-      const base64 = await fileToBase64(file);
-      const result = await uploadEventImage({
-        data: {
-          adminName: session.name,
-          contentType,
-          base64,
-          fileName: file.name,
-        },
-      });
-      if (result?.publicUrl) return result.publicUrl;
-    } catch (err) {
-      console.warn("[upload] server upload failed, falling back to client", err);
-    }
+  if (!session?.name) {
+    throw new Error("יש להתחבר לפאנל ניהול לפני העלאת תמונות");
   }
 
-  const { error } = await db.storage.from("event-images").upload(path, file, {
-    upsert: false,
-    contentType,
-    cacheControl: "3600",
-  });
-  if (error) throw new Error(error.message);
+  const contentType = getImageContentType(file);
+  const base64 = await fileToBase64(file);
 
-  const { data } = db.storage.from("event-images").getPublicUrl(path);
-  return data.publicUrl as string;
+  try {
+    const result = await uploadEventImage({
+      data: {
+        adminName: session.name,
+        contentType,
+        base64,
+        fileName: file.name || buildStoragePath(file),
+      },
+    });
+    if (result?.publicUrl) return result.publicUrl;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "העלאה נכשלה";
+    if (/service.role|service_role|secret/i.test(msg)) {
+      throw new Error(
+        "חסר SUPABASE_SERVICE_ROLE_KEY בשרת — הרץ את supabase/setup-all.sql ב-Supabase SQL Editor",
+      );
+    }
+    throw new Error(msg);
+  }
+
+  throw new Error("העלאה נכשלה");
 }

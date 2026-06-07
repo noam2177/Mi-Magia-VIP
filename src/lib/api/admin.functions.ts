@@ -3,6 +3,7 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { runDatabaseSetup } from "@/lib/db-setup.server";
 import { buildStoragePath, getImageContentType } from "@/lib/image-upload";
+import { ensureEventImagesBucket, EVENT_IMAGES_BUCKET } from "@/lib/storage-bucket.server";
 
 const ALLOWED_ADMIN_NAMES = ["נעם", "דני", "תומר"];
 
@@ -16,15 +17,22 @@ export const bootstrapDatabase = createServerFn({ method: "POST" })
   .inputValidator(z.object({ adminName: z.string().min(1) }))
   .handler(async ({ data }) => {
     assertAdmin(data.adminName);
+    await ensureEventImagesBucket();
+
     const result = await runDatabaseSetup();
-    if (!result.ok) {
-      throw new Error(
-        result.reason === "missing_db_url"
-          ? "חסר DATABASE_URL בשרת — הרץ את supabase/setup-all.sql ב-Supabase SQL Editor"
-          : "הקמת מסד הנתונים נכשלה",
-      );
+    if (!result.ok && result.reason !== "missing_db_url") {
+      throw new Error("הקמת מסד הנתונים נכשלה");
     }
-    return { ok: true as const };
+
+    return { ok: true as const, dbSetup: result.ok };
+  });
+
+export const ensureStorageBucket = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ adminName: z.string().min(1) }))
+  .handler(async ({ data }) => {
+    assertAdmin(data.adminName);
+    await ensureEventImagesBucket();
+    return { ok: true as const, bucket: EVENT_IMAGES_BUCKET };
   });
 
 export const uploadEventImage = createServerFn({ method: "POST" })
@@ -38,6 +46,7 @@ export const uploadEventImage = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     assertAdmin(data.adminName);
+    await ensureEventImagesBucket();
 
     const path = buildStoragePath({
       name: data.fileName || "upload.jpg",
@@ -47,7 +56,7 @@ export const uploadEventImage = createServerFn({ method: "POST" })
     const buffer = Buffer.from(data.base64, "base64");
     const contentType = data.contentType || getImageContentType({ type: data.contentType } as File);
 
-    const { error } = await supabaseAdmin.storage.from("event-images").upload(path, buffer, {
+    const { error } = await supabaseAdmin.storage.from(EVENT_IMAGES_BUCKET).upload(path, buffer, {
       contentType,
       upsert: false,
       cacheControl: "3600",
@@ -55,6 +64,6 @@ export const uploadEventImage = createServerFn({ method: "POST" })
 
     if (error) throw new Error(error.message);
 
-    const { data: urlData } = supabaseAdmin.storage.from("event-images").getPublicUrl(path);
+    const { data: urlData } = supabaseAdmin.storage.from(EVENT_IMAGES_BUCKET).getPublicUrl(path);
     return { publicUrl: urlData.publicUrl };
   });
