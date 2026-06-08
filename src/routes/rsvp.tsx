@@ -91,6 +91,13 @@ function RsvpPage() {
       if (data) setFaqItems(parseSiteSettings(data).faq_items);
     };
     load();
+    const ch = db
+      .channel("settings-rsvp")
+      .on("postgres_changes", { event: "*", schema: "public", table: "site_settings" }, load)
+      .subscribe();
+    return () => {
+      db.removeChannel(ch);
+    };
   }, []);
 
   const form = useForm<FormValues>({
