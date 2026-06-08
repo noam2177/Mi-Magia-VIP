@@ -47,7 +47,6 @@ const schema = z
     status: z.enum(["attending", "not_attending"], { required_error: "יש לבחור סטטוס" }),
     guests: z.coerce.number().min(1).max(5).default(1),
     sleep_option: z.string().optional(),
-    blessing: z.string().trim().max(500).optional(),
     guest_question: z.string().trim().max(500).optional(),
   })
   .refine((v) => (v.full_name && v.full_name.length > 0) || (v.phone && v.phone.length > 0), {
