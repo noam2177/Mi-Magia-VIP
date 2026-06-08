@@ -67,7 +67,7 @@ const registerSchema = z.object({
   guests: z.coerce.number().min(1).max(5).default(1),
   status: z.enum(["attending", "not_attending"]).optional(),
   sleep_option: z.string().optional(),
-  blessing: z.string().trim().max(500).optional(),
+  
   guest_question: z.string().trim().max(500).optional(),
 });
 
