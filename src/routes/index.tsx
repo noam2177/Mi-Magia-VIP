@@ -146,7 +146,7 @@ function LandingPage() {
           {carousel.length > 0 ? (
             <Carousel images={carousel} />
           ) : (
-            <div className="rounded-2xl border border-dashed border-[color:var(--pink-deep)]/25 bg-white/50 aspect-[16/9] flex items-center justify-center text-muted-foreground text-sm">
+            <div className="rounded-2xl border border-dashed border-[color:var(--pink-deep)]/25 bg-white/50 aspect-[3/4] flex items-center justify-center text-muted-foreground text-sm">
               גלריית תמונות תופיע כאן בקרוב
             </div>
           )}
@@ -233,7 +233,7 @@ function CollageBackground({
       {tiles.map((tile) => (
         <div
           key={tile.key}
-          className="aspect-square w-full bg-cover bg-center"
+          className="aspect-[3/4] w-full bg-cover bg-center"
           style={{ backgroundImage: `url(${tile.url})` }}
         />
       ))}
@@ -275,7 +275,7 @@ function Carousel({ images }: { images: string[] }) {
             <div key={i} className="min-w-0 flex-[0_0_100%]">
               <button
                 type="button"
-                className="block w-full aspect-[16/9] bg-cover bg-center cursor-pointer transition-opacity hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--pink-deep)]"
+                className="block w-full aspect-[3/4] bg-cover bg-center cursor-pointer transition-opacity hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--pink-deep)]"
                 style={{ backgroundImage: `url(${url})` }}
                 onClick={() => setLightboxUrl(url)}
                 aria-label={`הגדלת תמונה ${i + 1}`}

@@ -936,7 +936,7 @@ function ImageManager({
         </Button>
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
           {images.map((url) => (
-            <div key={url} className="relative group aspect-square rounded-md overflow-hidden border">
+            <div key={url} className="relative group aspect-[3/4] rounded-md overflow-hidden border">
               <img src={url} alt="" className="w-full h-full object-cover" />
               <button
                 onClick={() => onDelete(url)}
