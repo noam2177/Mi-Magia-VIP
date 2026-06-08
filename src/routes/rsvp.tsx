@@ -99,7 +99,6 @@ function RsvpPage() {
       status: undefined as any,
       guests: 1,
       sleep_option: "",
-      blessing: "",
       guest_question: "",
       full_name: "",
       phone: "",
@@ -115,7 +114,7 @@ function RsvpPage() {
       phone: "",
       guests: 1,
       sleep_option: "",
-      blessing: "",
+      
       guest_question: "",
     },
   });
@@ -142,7 +141,7 @@ function RsvpPage() {
         guests: values.status === "attending" ? values.guests : 1,
         status: values.status ?? null,
         sleep: sleepLabel,
-        blessing: values.blessing || null,
+        blessing: null,
         guest_question: values.guest_question || null,
         is_self_registered: true,
         responded_at: values.status ? new Date().toISOString() : null,
@@ -165,10 +164,9 @@ function RsvpPage() {
           inviteeId: result.id,
           fullName: values.full_name,
           phone: values.phone,
-          guests: values.guests,
+          guests: values.guests ?? 1,
           status: values.status ?? null,
           sleepLabel,
-          blessing: values.blessing,
           guestQuestion: values.guest_question,
         });
       } catch (notifyErr) {
@@ -200,9 +198,9 @@ function RsvpPage() {
         full_name: values.full_name || null,
         phone: values.phone || null,
         status: values.status,
-        guests: values.status === "attending" ? values.guests : 1,
+        guests: values.status === "attending" ? (values.guests ?? 1) : 1,
         sleep: sleepLabel,
-        blessing: values.blessing || null,
+        blessing: null,
         guest_question: values.guest_question || null,
         responded_at: new Date().toISOString(),
       };
@@ -233,9 +231,8 @@ function RsvpPage() {
             fullName: values.full_name,
             phone: values.phone,
             status: values.status,
-            guests: values.status === "attending" ? values.guests : 1,
+            guests: values.status === "attending" ? (values.guests ?? 1) : 1,
             sleepLabel,
-            blessing: values.blessing,
             guestQuestion: values.guest_question,
             isUpdate: !!existingId,
           });
@@ -356,10 +353,8 @@ function RsvpPage() {
                   </>
                 )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="reg_blessing">ברכה קצרה</Label>
-                  <Textarea id="reg_blessing" {...registerForm.register("blessing")} rows={2} placeholder="מאחלים לכם..." />
-                </div>
+
+
 
                 <div className="space-y-2 border-t pt-4">
                   <Label htmlFor="reg_question">יש לכם שאלה? כתבו לנו</Label>
@@ -451,10 +446,8 @@ function RsvpPage() {
               </>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="blessing">ברכה קצרה</Label>
-              <Textarea id="blessing" {...form.register("blessing")} rows={3} placeholder="מאחלים לכם..." />
-            </div>
+
+
 
             <div className="space-y-2 border-t pt-4">
               <Label htmlFor="guest_question">יש לכם שאלה? כתבו לנו</Label>
