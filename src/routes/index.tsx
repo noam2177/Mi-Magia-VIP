@@ -142,14 +142,16 @@ function LandingPage() {
           </section>
         </FloralTextFrame>
 
-        <section aria-label="גלריית תמונות" className="mt-12 sm:mt-16 pb-8">
-          {carousel.length > 0 ? (
-            <Carousel images={carousel} />
-          ) : (
-            <div className="rounded-2xl border border-dashed border-[color:var(--pink-deep)]/25 bg-white/50 aspect-[3/4] flex items-center justify-center text-muted-foreground text-sm">
-              גלריית תמונות תופיע כאן בקרוב
-            </div>
-          )}
+        <section aria-label="גלריית תמונות" className="mt-8 sm:mt-10 pb-6">
+          <div className="max-w-sm sm:max-w-md mx-auto">
+            {carousel.length > 0 ? (
+              <Carousel images={carousel} />
+            ) : (
+              <div className="rounded-2xl border border-dashed border-[color:var(--pink-deep)]/25 bg-white/50 aspect-[3/4] flex items-center justify-center text-muted-foreground text-sm">
+                גלריית תמונות תופיע כאן בקרוב
+              </div>
+            )}
+          </div>
         </section>
       </main>
     </div>
