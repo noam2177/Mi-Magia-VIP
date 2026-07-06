@@ -131,32 +131,30 @@ function RsvpPage() {
   const onRegister = async (values: RegisterValues) => {
     setRegistering(true);
     try {
-      const existingId = await findInviteeId(values.phone, values.full_name);
-      if (existingId) {
-        toast.error("כבר קיימת רשומה עם שם או טלפון זה — אפשר לעבור לטאב אישור הגעה");
-        return;
-      }
-
       const sleepLabel =
         values.status === "attending" && values.sleep_option
           ? SLEEP_OPTIONS.find((o) => o.value === values.sleep_option)?.label ?? values.sleep_option
           : null;
 
-      const result = await insertInvitee({
+      const result = await submitRsvp({
         full_name: values.full_name.trim(),
         phone: values.phone.trim(),
         guests: values.status === "attending" ? values.guests : 1,
         status: values.status ?? null,
         sleep: sleepLabel,
-        blessing: null,
         guest_question: values.guest_question || null,
         is_self_registered: true,
         responded_at: values.status ? new Date().toISOString() : null,
+        mode: "register_only",
       });
 
       if ("error" in result) {
         console.error("[register]", result.error);
         toast.error("שגיאה בהרשמה. ודאו שם וטלפון תקינים ונסו שוב.");
+        return;
+      }
+      if (result.existing) {
+        toast.error("כבר קיימת רשומה עם שם או טלפון זה — אפשר לעבור לטאב אישור הגעה");
         return;
       }
 
@@ -166,6 +164,7 @@ function RsvpPage() {
           fullName: values.full_name,
           phone: values.phone,
           source: "self_registration",
+          fromPublic: true,
         });
         await notifySelfRegistration({
           inviteeId: result.id,
@@ -175,6 +174,7 @@ function RsvpPage() {
           status: values.status ?? null,
           sleepLabel,
           guestQuestion: values.guest_question,
+          fromPublic: true,
         });
       } catch (notifyErr) {
         console.warn("[register] notification failed", notifyErr);
