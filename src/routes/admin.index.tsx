@@ -246,15 +246,15 @@ function AdminPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>שם</TableHead>
-                    <TableHead className="hidden sm:table-cell">טלפון</TableHead>
-                    <TableHead>סטטוס</TableHead>
-                    <TableHead className="hidden md:table-cell">אורחים</TableHead>
-                    <TableHead className="hidden lg:table-cell">לינה</TableHead>
-                    <TableHead className="hidden lg:table-cell">ברכה</TableHead>
-                    <TableHead className="hidden md:table-cell">שאלה</TableHead>
-                    <TableHead className="hidden sm:table-cell">הודעה</TableHead>
-                    <TableHead>פעולות</TableHead>
+                    <TableHead className="whitespace-nowrap">שם</TableHead>
+                    <TableHead className="whitespace-nowrap">טלפון</TableHead>
+                    <TableHead className="whitespace-nowrap">סטטוס</TableHead>
+                    <TableHead className="whitespace-nowrap">אורחים</TableHead>
+                    <TableHead className="whitespace-nowrap">לינה</TableHead>
+                    <TableHead className="whitespace-nowrap">ברכה</TableHead>
+                    <TableHead className="whitespace-nowrap">שאלה</TableHead>
+                    <TableHead className="whitespace-nowrap">הודעה</TableHead>
+                    <TableHead className="whitespace-nowrap">פעולות</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
