@@ -161,27 +161,16 @@ function AdminPage() {
       </header>
 
       <main className="max-w-7xl mx-auto p-4 space-y-6">
-        {(schemaError || bootstrapping) && (
+        {schemaError && (
           <Card className="border-amber-300 bg-amber-50">
             <CardContent className="pt-4 space-y-2 text-sm">
-              {bootstrapping ? (
-                <p>מקים את מסד הנתונים...</p>
-              ) : (
-                <>
-                  <p className="font-medium">טבלאות Supabase חסרות (שגיאת 404).</p>
-                  <p className="text-muted-foreground">
-                    פתח Supabase → SQL Editor והרץ את הקובץ{" "}
-                    <code className="px-1 bg-white rounded">supabase/setup-all.sql</code>
-                  </p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => loadAll(true)}
-                  >
-                    נסה הקמה אוטומטית
-                  </Button>
-                </>
-              )}
+              <p className="font-medium">שגיאה בטעינת נתונים.</p>
+              <p className="text-muted-foreground">
+                אם השגיאה חוזרת, ודא שהמיגרציות של הפרויקט הוחלו במסד הנתונים.
+              </p>
+              <Button size="sm" variant="outline" onClick={() => loadAll()}>
+                נסה שוב
+              </Button>
             </CardContent>
           </Card>
         )}
