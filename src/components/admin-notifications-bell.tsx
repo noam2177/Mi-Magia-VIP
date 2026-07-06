@@ -119,7 +119,7 @@ export function AdminNotificationsBell() {
               onClick={() => {
                 setOpen(false);
                 setAllOpen(true);
-                markNotificationsSeen(adminName);
+                markNotificationsSeen(adminId);
               }}
             >
               כל ההתראות
