@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { publishRsvpNotification } from "@/lib/api/admin.functions";
 import { getSleepLabel } from "@/lib/sleep-options";
 
 export type NotificationType =
@@ -21,21 +22,21 @@ export type AdminNotification = {
 
 const LAST_SEEN_KEY = "admin_notifications_last_seen_v1";
 
-export function getNotificationsLastSeen(adminName: string): string | null {
+export function getNotificationsLastSeen(adminKey: string): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(`${LAST_SEEN_KEY}_${adminName}`);
+  return localStorage.getItem(`${LAST_SEEN_KEY}_${adminKey}`);
 }
 
-export function markNotificationsSeen(adminName: string) {
+export function markNotificationsSeen(adminKey: string) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(`${LAST_SEEN_KEY}_${adminName}`, new Date().toISOString());
+  localStorage.setItem(`${LAST_SEEN_KEY}_${adminKey}`, new Date().toISOString());
 }
 
 export function countUnreadSinceLastSeen(
   notifications: AdminNotification[],
-  adminName: string,
+  adminKey: string,
 ): number {
-  const lastSeen = getNotificationsLastSeen(adminName);
+  const lastSeen = getNotificationsLastSeen(adminKey);
   if (!lastSeen) return notifications.length;
   return notifications.filter((n) => n.created_at > lastSeen).length;
 }
@@ -53,13 +54,37 @@ export function formatNotificationTime(iso: string): string {
   }
 }
 
-async function pushNotification(input: {
+type PushInput = {
   type: NotificationType;
   invitee_id?: string | null;
   title: string;
   body: string;
   meta?: Record<string, unknown>;
-}) {
+  /** true when the caller is an anonymous public user (RSVP flow). */
+  fromPublic?: boolean;
+};
+
+async function pushNotification(input: PushInput) {
+  if (input.fromPublic) {
+    // Public callers cannot INSERT directly into admin_notifications (RLS).
+    // Route through the guarded server function — it only accepts entries
+    // tied to an existing invitee id.
+    if (!input.invitee_id) return;
+    try {
+      await publishRsvpNotification({
+        data: {
+          type: input.type,
+          invitee_id: input.invitee_id,
+          title: input.title,
+          body: input.body,
+          meta: input.meta,
+        },
+      });
+    } catch (err) {
+      console.warn("[notifications] public publish failed", err);
+    }
+    return;
+  }
   const { error } = await db.from("admin_notifications").insert({
     type: input.type,
     invitee_id: input.invitee_id ?? null,
@@ -84,6 +109,7 @@ export async function notifyRsvpSubmit(params: {
   blessing?: string | null;
   guestQuestion?: string | null;
   isUpdate: boolean;
+  fromPublic?: boolean;
 }) {
   const name = displayName(params.fullName, params.phone);
   const details: string[] = [];
@@ -116,6 +142,7 @@ export async function notifyRsvpSubmit(params: {
     title,
     body,
     meta: { status: params.status, guests: params.guests },
+    fromPublic: params.fromPublic,
   });
 
   if (params.guestQuestion?.trim()) {
@@ -125,6 +152,7 @@ export async function notifyRsvpSubmit(params: {
       title: `שאלה חדשה מ${name}`,
       body: params.guestQuestion.trim(),
       meta: { question: params.guestQuestion.trim() },
+      fromPublic: params.fromPublic,
     });
   }
 }
@@ -135,6 +163,7 @@ export async function notifyInviteeAdded(params: {
   phone?: string | null;
   source?: "admin" | "import" | "rsvp" | "self_registration";
   batchCount?: number;
+  fromPublic?: boolean;
 }) {
   const name = displayName(params.fullName, params.phone);
   const sourceLabel =
@@ -149,10 +178,11 @@ export async function notifyInviteeAdded(params: {
   if (params.batchCount && params.batchCount > 1 && !params.fullName && !params.phone) {
     await pushNotification({
       type: "invite_added",
-      invitee_id: null,
+      invitee_id: params.inviteeId || null,
       title: `נוספו ${params.batchCount} מוזמנים חדשים`,
       body: `מקור: ${sourceLabel}`,
       meta: { count: params.batchCount, source: params.source },
+      fromPublic: params.fromPublic,
     });
     return;
   }
@@ -165,6 +195,7 @@ export async function notifyInviteeAdded(params: {
       .filter(Boolean)
       .join(" · "),
     meta: { source: params.source },
+    fromPublic: params.fromPublic,
   });
 }
 
@@ -202,6 +233,7 @@ export async function notifySelfRegistration(params: {
   sleepLabel?: string | null;
   blessing?: string | null;
   guestQuestion?: string | null;
+  fromPublic?: boolean;
 }) {
   const name = displayName(params.fullName, params.phone);
   const details: string[] = [`טלפון: ${params.phone}`, `אורחים: ${params.guests}`];
@@ -220,6 +252,7 @@ export async function notifySelfRegistration(params: {
     title: `הרשמה חדשה: ${name}`,
     body: details.join(" · "),
     meta: { phone: params.phone, guests: params.guests, status: params.status },
+    fromPublic: params.fromPublic,
   });
 
   if (params.guestQuestion?.trim()) {
@@ -229,6 +262,7 @@ export async function notifySelfRegistration(params: {
       title: `שאלה חדשה מ${name}`,
       body: params.guestQuestion.trim(),
       meta: { question: params.guestQuestion.trim() },
+      fromPublic: params.fromPublic,
     });
   }
 }
@@ -238,14 +272,17 @@ export async function notifyNewInviteeCreated(params: {
   fullName?: string | null;
   phone?: string | null;
   source: "rsvp" | "self_registration";
+  fromPublic?: boolean;
 }) {
   await notifyInviteeAdded({
     inviteeId: params.inviteeId,
     fullName: params.fullName,
     phone: params.phone,
     source: params.source,
+    fromPublic: params.fromPublic,
   });
 }
+
 
 export async function fetchNotifications(limit = 100): Promise<AdminNotification[]> {
   const { data, error } = await db

@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_notifications: {
+        Row: {
+          body: string
+          created_at: string | null
+          id: string
+          invitee_id: string | null
+          meta: Json | null
+          title: string
+          type: string
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          id?: string
+          invitee_id?: string | null
+          meta?: Json | null
+          title: string
+          type: string
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          id?: string
+          invitee_id?: string | null
+          meta?: Json | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_notifications_invitee_id_fkey"
+            columns: ["invitee_id"]
+            isOneToOne: false
+            referencedRelation: "invitees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitees: {
         Row: {
           blessing: string | null
@@ -22,6 +60,7 @@ export type Database = {
           guest_question: string | null
           guests: number | null
           id: string
+          is_self_registered: boolean | null
           message_sent: boolean | null
           phone: string | null
           responded_at: string | null
@@ -35,6 +74,7 @@ export type Database = {
           guest_question?: string | null
           guests?: number | null
           id?: string
+          is_self_registered?: boolean | null
           message_sent?: boolean | null
           phone?: string | null
           responded_at?: string | null
@@ -48,6 +88,7 @@ export type Database = {
           guest_question?: string | null
           guests?: number | null
           id?: string
+          is_self_registered?: boolean | null
           message_sent?: boolean | null
           phone?: string | null
           responded_at?: string | null
@@ -98,6 +139,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -106,7 +168,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -233,6 +295,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin"],
+    },
   },
 } as const

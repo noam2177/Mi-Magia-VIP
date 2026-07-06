@@ -3,8 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { db } from "@/lib/db";
-import { bootstrapDatabase } from "@/lib/api/admin.functions";
-import { getAdminSession, adminLogout } from "@/lib/admin-session";
+import { getAdminUser, adminLogout, type AdminUser } from "@/lib/admin-session";
 import { isSchemaMissingError } from "@/lib/db-errors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +26,7 @@ import { DEFAULT_BROADCAST_MESSAGE, formatBroadcastMessage, getInviteLink } from
 import { parseSiteSettings, type FaqItem, type SiteSettings } from "@/lib/site-settings";
 import { LANDING_BODY_PARAGRAPHS } from "@/lib/landing-content";
 import { ACCEPTED_IMAGE_ACCEPT } from "@/lib/image-upload";
-import { insertInvitee } from "@/lib/invitees-db";
+import { insertInviteeAdmin as insertInvitee } from "@/lib/invitees-db";
 import { notifyInviteeAdded, notifyInviteesAddedBatch } from "@/lib/notifications";
 import { uploadEventImageFile } from "@/lib/upload-event-image";
 import { AdminGuestMessagesButton, AdminNotificationsBell } from "@/components/admin-notifications-bell";
@@ -55,22 +54,31 @@ const DEFAULT_SETTINGS: SiteSettings = parseSiteSettings(null);
 
 function AdminPage() {
   const navigate = useNavigate();
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [list, setList] = useState<Invitee[]>([]);
   const [search, setSearch] = useState("");
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
   const [schemaError, setSchemaError] = useState(false);
-  const [bootstrapping, setBootstrapping] = useState(false);
 
   useEffect(() => {
-    if (!getAdminSession()) {
-      navigate({ to: "/admin/login" });
-      return;
-    }
-    setAuthChecked(true);
+    let cancelled = false;
+    (async () => {
+      const admin = await getAdminUser();
+      if (cancelled) return;
+      if (!admin) {
+        navigate({ to: "/admin/login" });
+        return;
+      }
+      setAdminUser(admin);
+      setAuthChecked(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [navigate]);
 
-  const loadAll = async (tryBootstrap = true) => {
+  const loadAll = async () => {
     const { data, error: inviteesError } = await db
       .from("invitees")
       .select("*")
@@ -82,31 +90,11 @@ function AdminPage() {
       .maybeSingle();
 
     if (
-      tryBootstrap &&
-      (isSchemaMissingError(inviteesError) || isSchemaMissingError(settingsError))
+      isSchemaMissingError(inviteesError) ||
+      isSchemaMissingError(settingsError) ||
+      inviteesError ||
+      settingsError
     ) {
-      const session = getAdminSession();
-      if (session?.name) {
-        try {
-          setBootstrapping(true);
-          await bootstrapDatabase({ data: { adminName: session.name } });
-          toast.success("מסד הנתונים הוקם בהצלחה");
-          setSchemaError(false);
-          return loadAll(false);
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : "הקמת מסד הנתונים נכשלה";
-          toast.error(msg);
-          setSchemaError(true);
-          return;
-        } finally {
-          setBootstrapping(false);
-        }
-      }
-      setSchemaError(true);
-      return;
-    }
-
-    if (inviteesError || settingsError) {
       setSchemaError(true);
       return;
     }
@@ -118,18 +106,7 @@ function AdminPage() {
 
   useEffect(() => {
     if (!authChecked) return;
-    const init = async () => {
-      const session = getAdminSession();
-      if (session?.name) {
-        try {
-          await bootstrapDatabase({ data: { adminName: session.name } });
-        } catch {
-          // bucket/db bootstrap — loadAll יציג שגיאות אם עדיין חסר
-        }
-      }
-      await loadAll();
-    };
-    void init();
+    void loadAll();
     const ch = db
       .channel("admin-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "invitees" }, loadAll)
@@ -176,35 +153,24 @@ function AdminPage() {
             <AdminNotificationsBell />
             <AdminGuestMessagesButton invitees={list} />
             <BackToHomeLink />
-            <Button variant="ghost" size="sm" onClick={() => { adminLogout(); navigate({ to: "/admin/login" }); }}>
-              <LogOut className="ms-1 h-4 w-4" /> יציאה
+            <Button variant="ghost" size="sm" onClick={async () => { await adminLogout(); navigate({ to: "/admin/login" }); }}>
+              <LogOut className="ms-1 h-4 w-4" /> יציאה{adminUser?.email ? ` (${adminUser.email})` : ""}
             </Button>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto p-4 space-y-6">
-        {(schemaError || bootstrapping) && (
+        {schemaError && (
           <Card className="border-amber-300 bg-amber-50">
             <CardContent className="pt-4 space-y-2 text-sm">
-              {bootstrapping ? (
-                <p>מקים את מסד הנתונים...</p>
-              ) : (
-                <>
-                  <p className="font-medium">טבלאות Supabase חסרות (שגיאת 404).</p>
-                  <p className="text-muted-foreground">
-                    פתח Supabase → SQL Editor והרץ את הקובץ{" "}
-                    <code className="px-1 bg-white rounded">supabase/setup-all.sql</code>
-                  </p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => loadAll(true)}
-                  >
-                    נסה הקמה אוטומטית
-                  </Button>
-                </>
-              )}
+              <p className="font-medium">שגיאה בטעינת נתונים.</p>
+              <p className="text-muted-foreground">
+                אם השגיאה חוזרת, ודא שהמיגרציות של הפרויקט הוחלו במסד הנתונים.
+              </p>
+              <Button size="sm" variant="outline" onClick={() => loadAll()}>
+                נסה שוב
+              </Button>
             </CardContent>
           </Card>
         )}

@@ -9,7 +9,7 @@ import { db } from "@/lib/db";
 import { SLEEP_OPTIONS } from "@/lib/sleep-options";
 import { FAQ_QUESTIONS } from "@/lib/faq-questions";
 import { parseSiteSettings, type FaqItem } from "@/lib/site-settings";
-import { findInviteeId, insertInvitee } from "@/lib/invitees-db";
+import { submitRsvp } from "@/lib/invitees-db";
 import { notifyNewInviteeCreated, notifyRsvpSubmit, notifySelfRegistration } from "@/lib/notifications";
 import { markRsvpSubmitted } from "@/lib/rsvp-storage";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -131,32 +131,30 @@ function RsvpPage() {
   const onRegister = async (values: RegisterValues) => {
     setRegistering(true);
     try {
-      const existingId = await findInviteeId(values.phone, values.full_name);
-      if (existingId) {
-        toast.error("כבר קיימת רשומה עם שם או טלפון זה — אפשר לעבור לטאב אישור הגעה");
-        return;
-      }
-
       const sleepLabel =
         values.status === "attending" && values.sleep_option
           ? SLEEP_OPTIONS.find((o) => o.value === values.sleep_option)?.label ?? values.sleep_option
           : null;
 
-      const result = await insertInvitee({
+      const result = await submitRsvp({
         full_name: values.full_name.trim(),
         phone: values.phone.trim(),
         guests: values.status === "attending" ? values.guests : 1,
         status: values.status ?? null,
         sleep: sleepLabel,
-        blessing: null,
         guest_question: values.guest_question || null,
         is_self_registered: true,
         responded_at: values.status ? new Date().toISOString() : null,
+        mode: "register_only",
       });
 
       if ("error" in result) {
         console.error("[register]", result.error);
         toast.error("שגיאה בהרשמה. ודאו שם וטלפון תקינים ונסו שוב.");
+        return;
+      }
+      if (result.existing) {
+        toast.error("כבר קיימת רשומה עם שם או טלפון זה — אפשר לעבור לטאב אישור הגעה");
         return;
       }
 
@@ -166,6 +164,7 @@ function RsvpPage() {
           fullName: values.full_name,
           phone: values.phone,
           source: "self_registration",
+          fromPublic: true,
         });
         await notifySelfRegistration({
           inviteeId: result.id,
@@ -175,6 +174,7 @@ function RsvpPage() {
           status: values.status ?? null,
           sleepLabel,
           guestQuestion: values.guest_question,
+          fromPublic: true,
         });
       } catch (notifyErr) {
         console.warn("[register] notification failed", notifyErr);
@@ -194,58 +194,50 @@ function RsvpPage() {
   const onSubmit = async (values: FormValues) => {
     setSubmitting(true);
     try {
-      const existingId = await findInviteeId(values.phone, values.full_name);
-
       const sleepLabel =
         values.status === "attending" && values.sleep_option
           ? SLEEP_OPTIONS.find((o) => o.value === values.sleep_option)?.label ?? values.sleep_option
           : null;
 
-      const payload = {
+      const result = await submitRsvp({
         full_name: values.full_name || null,
         phone: values.phone || null,
         status: values.status,
         guests: values.status === "attending" ? (values.guests ?? 1) : 1,
         sleep: sleepLabel,
-        blessing: null,
         guest_question: values.guest_question || null,
         responded_at: new Date().toISOString(),
-      };
+        mode: "upsert",
+      });
 
-      let id = existingId;
-      if (existingId) {
-        const { error } = await db.from("invitees").update(payload).eq("id", existingId);
-        if (error) throw error;
-      } else {
-        const created = await insertInvitee(payload);
-        if ("error" in created) throw new Error(created.error);
-        id = created.id;
-      }
+      if ("error" in result) throw new Error(result.error);
+      const id = result.id;
+      const isUpdate = result.existing;
 
-      if (id) {
-        markRsvpSubmitted(id);
-        try {
-          if (!existingId) {
-            await notifyNewInviteeCreated({
-              inviteeId: id,
-              fullName: values.full_name,
-              phone: values.phone,
-              source: "rsvp",
-            });
-          }
-          await notifyRsvpSubmit({
+      markRsvpSubmitted(id);
+      try {
+        if (!isUpdate) {
+          await notifyNewInviteeCreated({
             inviteeId: id,
             fullName: values.full_name,
             phone: values.phone,
-            status: values.status,
-            guests: values.status === "attending" ? (values.guests ?? 1) : 1,
-            sleepLabel,
-            guestQuestion: values.guest_question,
-            isUpdate: !!existingId,
+            source: "rsvp",
+            fromPublic: true,
           });
-        } catch (notifyErr) {
-          console.warn("[rsvp] notification failed", notifyErr);
         }
+        await notifyRsvpSubmit({
+          inviteeId: id,
+          fullName: values.full_name,
+          phone: values.phone,
+          status: values.status,
+          guests: values.status === "attending" ? (values.guests ?? 1) : 1,
+          sleepLabel,
+          guestQuestion: values.guest_question,
+          isUpdate,
+          fromPublic: true,
+        });
+      } catch (notifyErr) {
+        console.warn("[rsvp] notification failed", notifyErr);
       }
       toast.success("תודה! האישור נשלח ✨");
       navigate({ to: "/" });

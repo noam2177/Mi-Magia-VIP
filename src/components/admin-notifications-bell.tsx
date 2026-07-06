@@ -5,7 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { db } from "@/lib/db";
-import { getAdminSession } from "@/lib/admin-session";
+import { getAdminUser } from "@/lib/admin-session";
 import {
   countUnreadSinceLastSeen,
   fetchNotifications,
@@ -34,8 +34,7 @@ function NotificationItem({ item }: { item: AdminNotification }) {
 }
 
 export function AdminNotificationsBell() {
-  const session = getAdminSession();
-  const adminName = session?.name ?? "";
+  const [adminId, setAdminId] = useState<string>("");
   const [open, setOpen] = useState(false);
   const [allOpen, setAllOpen] = useState(false);
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
@@ -46,7 +45,18 @@ export function AdminNotificationsBell() {
   };
 
   useEffect(() => {
-    if (!adminName) return;
+    let cancelled = false;
+    (async () => {
+      const admin = await getAdminUser();
+      if (!cancelled) setAdminId(admin?.id ?? "");
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!adminId) return;
     void load();
     const ch = db
       .channel("admin-notifications")
@@ -55,23 +65,23 @@ export function AdminNotificationsBell() {
     return () => {
       db.removeChannel(ch);
     };
-  }, [adminName]);
+  }, [adminId]);
 
   const unread = useMemo(
-    () => (adminName ? countUnreadSinceLastSeen(notifications, adminName) : 0),
-    [notifications, adminName],
+    () => (adminId ? countUnreadSinceLastSeen(notifications, adminId) : 0),
+    [notifications, adminId],
   );
 
   const recent = notifications.slice(0, 15);
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
-    if (next && adminName) {
-      markNotificationsSeen(adminName);
+    if (next && adminId) {
+      markNotificationsSeen(adminId);
     }
   };
 
-  if (!adminName) return null;
+  if (!adminId) return null;
 
   return (
     <>
@@ -109,7 +119,7 @@ export function AdminNotificationsBell() {
               onClick={() => {
                 setOpen(false);
                 setAllOpen(true);
-                markNotificationsSeen(adminName);
+                markNotificationsSeen(adminId);
               }}
             >
               כל ההתראות
