@@ -109,6 +109,7 @@ export async function notifyRsvpSubmit(params: {
   blessing?: string | null;
   guestQuestion?: string | null;
   isUpdate: boolean;
+  fromPublic?: boolean;
 }) {
   const name = displayName(params.fullName, params.phone);
   const details: string[] = [];
@@ -141,6 +142,7 @@ export async function notifyRsvpSubmit(params: {
     title,
     body,
     meta: { status: params.status, guests: params.guests },
+    fromPublic: params.fromPublic,
   });
 
   if (params.guestQuestion?.trim()) {
@@ -150,6 +152,7 @@ export async function notifyRsvpSubmit(params: {
       title: `שאלה חדשה מ${name}`,
       body: params.guestQuestion.trim(),
       meta: { question: params.guestQuestion.trim() },
+      fromPublic: params.fromPublic,
     });
   }
 }
