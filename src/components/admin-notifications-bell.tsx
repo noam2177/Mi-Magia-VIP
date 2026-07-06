@@ -5,7 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { db } from "@/lib/db";
-import { getAdminSession } from "@/lib/admin-session";
+import { getAdminUser } from "@/lib/admin-session";
 import {
   countUnreadSinceLastSeen,
   fetchNotifications,
