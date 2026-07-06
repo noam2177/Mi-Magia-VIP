@@ -314,6 +314,7 @@ function InviteeRow({
   broadcastMessage: string;
 }) {
   const [editing, setEditing] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [draft, setDraft] = useState(row);
 
   useEffect(() => setDraft(row), [row]);
