@@ -153,8 +153,8 @@ function AdminPage() {
             <AdminNotificationsBell />
             <AdminGuestMessagesButton invitees={list} />
             <BackToHomeLink />
-            <Button variant="ghost" size="sm" onClick={() => { adminLogout(); navigate({ to: "/admin/login" }); }}>
-              <LogOut className="ms-1 h-4 w-4" /> יציאה
+            <Button variant="ghost" size="sm" onClick={async () => { await adminLogout(); navigate({ to: "/admin/login" }); }}>
+              <LogOut className="ms-1 h-4 w-4" /> יציאה{adminUser?.email ? ` (${adminUser.email})` : ""}
             </Button>
           </div>
         </div>
