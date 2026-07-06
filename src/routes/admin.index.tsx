@@ -26,7 +26,7 @@ import { DEFAULT_BROADCAST_MESSAGE, formatBroadcastMessage, getInviteLink } from
 import { parseSiteSettings, type FaqItem, type SiteSettings } from "@/lib/site-settings";
 import { LANDING_BODY_PARAGRAPHS } from "@/lib/landing-content";
 import { ACCEPTED_IMAGE_ACCEPT } from "@/lib/image-upload";
-import { insertInvitee } from "@/lib/invitees-db";
+import { insertInviteeAdmin as insertInvitee } from "@/lib/invitees-db";
 import { notifyInviteeAdded, notifyInviteesAddedBatch } from "@/lib/notifications";
 import { uploadEventImageFile } from "@/lib/upload-event-image";
 import { AdminGuestMessagesButton, AdminNotificationsBell } from "@/components/admin-notifications-bell";
