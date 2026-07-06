@@ -247,7 +247,7 @@ export const publishRsvpNotification = createServerFn({ method: "POST" })
       invitee_id: data.invitee_id,
       title: data.title,
       body: data.body,
-      meta: data.meta ?? {},
+      meta: (data.meta ?? {}) as never,
     });
     if (error) throw new Error(error.message);
     return { ok: true as const };
