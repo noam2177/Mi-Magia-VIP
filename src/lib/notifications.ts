@@ -283,19 +283,6 @@ export async function notifyNewInviteeCreated(params: {
   });
 }
 
-export async function notifyNewInviteeCreated(params: {
-  inviteeId: string;
-  fullName?: string | null;
-  phone?: string | null;
-  source: "rsvp" | "self_registration";
-}) {
-  await notifyInviteeAdded({
-    inviteeId: params.inviteeId,
-    fullName: params.fullName,
-    phone: params.phone,
-    source: params.source,
-  });
-}
 
 export async function fetchNotifications(limit = 100): Promise<AdminNotification[]> {
   const { data, error } = await db
