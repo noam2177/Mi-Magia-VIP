@@ -9,7 +9,7 @@ import { db } from "@/lib/db";
 import { SLEEP_OPTIONS } from "@/lib/sleep-options";
 import { FAQ_QUESTIONS } from "@/lib/faq-questions";
 import { parseSiteSettings, type FaqItem } from "@/lib/site-settings";
-import { findInviteeId, insertInvitee } from "@/lib/invitees-db";
+import { submitRsvp } from "@/lib/invitees-db";
 import { notifyNewInviteeCreated, notifyRsvpSubmit, notifySelfRegistration } from "@/lib/notifications";
 import { markRsvpSubmitted } from "@/lib/rsvp-storage";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
