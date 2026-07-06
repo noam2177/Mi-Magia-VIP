@@ -163,6 +163,7 @@ export async function notifyInviteeAdded(params: {
   phone?: string | null;
   source?: "admin" | "import" | "rsvp" | "self_registration";
   batchCount?: number;
+  fromPublic?: boolean;
 }) {
   const name = displayName(params.fullName, params.phone);
   const sourceLabel =
@@ -177,10 +178,11 @@ export async function notifyInviteeAdded(params: {
   if (params.batchCount && params.batchCount > 1 && !params.fullName && !params.phone) {
     await pushNotification({
       type: "invite_added",
-      invitee_id: null,
+      invitee_id: params.inviteeId || null,
       title: `נוספו ${params.batchCount} מוזמנים חדשים`,
       body: `מקור: ${sourceLabel}`,
       meta: { count: params.batchCount, source: params.source },
+      fromPublic: params.fromPublic,
     });
     return;
   }
@@ -193,6 +195,7 @@ export async function notifyInviteeAdded(params: {
       .filter(Boolean)
       .join(" · "),
     meta: { source: params.source },
+    fromPublic: params.fromPublic,
   });
 }
 
@@ -230,6 +233,7 @@ export async function notifySelfRegistration(params: {
   sleepLabel?: string | null;
   blessing?: string | null;
   guestQuestion?: string | null;
+  fromPublic?: boolean;
 }) {
   const name = displayName(params.fullName, params.phone);
   const details: string[] = [`טלפון: ${params.phone}`, `אורחים: ${params.guests}`];
@@ -248,6 +252,7 @@ export async function notifySelfRegistration(params: {
     title: `הרשמה חדשה: ${name}`,
     body: details.join(" · "),
     meta: { phone: params.phone, guests: params.guests, status: params.status },
+    fromPublic: params.fromPublic,
   });
 
   if (params.guestQuestion?.trim()) {
@@ -257,8 +262,25 @@ export async function notifySelfRegistration(params: {
       title: `שאלה חדשה מ${name}`,
       body: params.guestQuestion.trim(),
       meta: { question: params.guestQuestion.trim() },
+      fromPublic: params.fromPublic,
     });
   }
+}
+
+export async function notifyNewInviteeCreated(params: {
+  inviteeId: string;
+  fullName?: string | null;
+  phone?: string | null;
+  source: "rsvp" | "self_registration";
+  fromPublic?: boolean;
+}) {
+  await notifyInviteeAdded({
+    inviteeId: params.inviteeId,
+    fullName: params.fullName,
+    phone: params.phone,
+    source: params.source,
+    fromPublic: params.fromPublic,
+  });
 }
 
 export async function notifyNewInviteeCreated(params: {
