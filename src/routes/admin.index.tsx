@@ -54,22 +54,31 @@ const DEFAULT_SETTINGS: SiteSettings = parseSiteSettings(null);
 
 function AdminPage() {
   const navigate = useNavigate();
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [list, setList] = useState<Invitee[]>([]);
   const [search, setSearch] = useState("");
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
   const [schemaError, setSchemaError] = useState(false);
-  const [bootstrapping, setBootstrapping] = useState(false);
 
   useEffect(() => {
-    if (!getAdminSession()) {
-      navigate({ to: "/admin/login" });
-      return;
-    }
-    setAuthChecked(true);
+    let cancelled = false;
+    (async () => {
+      const admin = await getAdminUser();
+      if (cancelled) return;
+      if (!admin) {
+        navigate({ to: "/admin/login" });
+        return;
+      }
+      setAdminUser(admin);
+      setAuthChecked(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [navigate]);
 
-  const loadAll = async (tryBootstrap = true) => {
+  const loadAll = async () => {
     const { data, error: inviteesError } = await db
       .from("invitees")
       .select("*")
@@ -81,31 +90,11 @@ function AdminPage() {
       .maybeSingle();
 
     if (
-      tryBootstrap &&
-      (isSchemaMissingError(inviteesError) || isSchemaMissingError(settingsError))
+      isSchemaMissingError(inviteesError) ||
+      isSchemaMissingError(settingsError) ||
+      inviteesError ||
+      settingsError
     ) {
-      const session = getAdminSession();
-      if (session?.name) {
-        try {
-          setBootstrapping(true);
-          await bootstrapDatabase({ data: { adminName: session.name } });
-          toast.success("מסד הנתונים הוקם בהצלחה");
-          setSchemaError(false);
-          return loadAll(false);
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : "הקמת מסד הנתונים נכשלה";
-          toast.error(msg);
-          setSchemaError(true);
-          return;
-        } finally {
-          setBootstrapping(false);
-        }
-      }
-      setSchemaError(true);
-      return;
-    }
-
-    if (inviteesError || settingsError) {
       setSchemaError(true);
       return;
     }
@@ -117,18 +106,7 @@ function AdminPage() {
 
   useEffect(() => {
     if (!authChecked) return;
-    const init = async () => {
-      const session = getAdminSession();
-      if (session?.name) {
-        try {
-          await bootstrapDatabase({ data: { adminName: session.name } });
-        } catch {
-          // bucket/db bootstrap — loadAll יציג שגיאות אם עדיין חסר
-        }
-      }
-      await loadAll();
-    };
-    void init();
+    void loadAll();
     const ch = db
       .channel("admin-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "invitees" }, loadAll)
