@@ -246,15 +246,15 @@ function AdminPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>שם</TableHead>
-                    <TableHead className="hidden sm:table-cell">טלפון</TableHead>
-                    <TableHead>סטטוס</TableHead>
-                    <TableHead className="hidden md:table-cell">אורחים</TableHead>
-                    <TableHead className="hidden lg:table-cell">לינה</TableHead>
-                    <TableHead className="hidden lg:table-cell">ברכה</TableHead>
-                    <TableHead className="hidden md:table-cell">שאלה</TableHead>
-                    <TableHead className="hidden sm:table-cell">הודעה</TableHead>
-                    <TableHead>פעולות</TableHead>
+                    <TableHead className="whitespace-nowrap">שם</TableHead>
+                    <TableHead className="whitespace-nowrap">טלפון</TableHead>
+                    <TableHead className="whitespace-nowrap">סטטוס</TableHead>
+                    <TableHead className="whitespace-nowrap">אורחים</TableHead>
+                    <TableHead className="whitespace-nowrap">לינה</TableHead>
+                    <TableHead className="whitespace-nowrap">ברכה</TableHead>
+                    <TableHead className="whitespace-nowrap">שאלה</TableHead>
+                    <TableHead className="whitespace-nowrap">הודעה</TableHead>
+                    <TableHead className="whitespace-nowrap">פעולות</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -314,6 +314,7 @@ function InviteeRow({
   broadcastMessage: string;
 }) {
   const [editing, setEditing] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [draft, setDraft] = useState(row);
 
   useEffect(() => setDraft(row), [row]);
@@ -417,52 +418,55 @@ function InviteeRow({
         hasQuestion && "bg-amber-50/80 border-r-4 border-r-amber-500",
       )}
     >
-      <TableCell className="font-medium">
-        <div className="flex items-center gap-2">
-          {row.full_name || "—"}
+      <TableCell className="font-medium px-2 sm:px-4 py-2 text-xs sm:text-sm">
+        <button
+          type="button"
+          onClick={() => setDetailsOpen(true)}
+          className="flex items-center gap-1.5 text-start hover:underline underline-offset-2 decoration-[color:var(--pink-deep)]"
+        >
+          <span className="max-w-[7rem] sm:max-w-none truncate">{row.full_name || "—"}</span>
           {hasQuestion && (
-            <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">
+            <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold text-white shrink-0">
               שאלה
             </span>
           )}
           {row.is_self_registered && (
-            <span className="rounded-full bg-[color:var(--pink-deep)] px-2 py-0.5 text-[10px] font-bold text-white">
+            <span className="rounded-full bg-[color:var(--pink-deep)] px-1.5 py-0.5 text-[9px] font-bold text-white shrink-0">
               הרשמה
             </span>
           )}
-        </div>
+        </button>
       </TableCell>
-      <TableCell dir="ltr" className="text-start hidden sm:table-cell">{row.phone || "—"}</TableCell>
-      <TableCell>
+      <TableCell dir="ltr" className="text-start px-2 sm:px-4 py-2 text-xs sm:text-sm whitespace-nowrap">{row.phone || "—"}</TableCell>
+      <TableCell className="px-2 sm:px-4 py-2 text-xs sm:text-sm whitespace-nowrap">
         {row.status === "attending" && <span className="text-green-700">מגיע</span>}
         {row.status === "not_attending" && <span className="text-red-700">לא מגיע</span>}
         {!row.status && <span className="text-muted-foreground">—</span>}
-        {hasQuestion && <span className="sm:hidden ms-1 text-amber-600 text-xs">❓</span>}
       </TableCell>
-      <TableCell className="hidden md:table-cell">{row.guests}</TableCell>
-      <TableCell className="max-w-[12rem] truncate hidden lg:table-cell" title={getSleepLabel(row.sleep)}>{getSleepLabel(row.sleep)}</TableCell>
-      <TableCell className="max-w-xs truncate hidden lg:table-cell" title={row.blessing ?? ""}>{row.blessing || "—"}</TableCell>
+      <TableCell className="px-2 sm:px-4 py-2 text-xs sm:text-sm text-center">{row.guests}</TableCell>
+      <TableCell className="max-w-[8rem] truncate px-2 sm:px-4 py-2 text-xs sm:text-sm" title={getSleepLabel(row.sleep)}>{getSleepLabel(row.sleep)}</TableCell>
+      <TableCell className="max-w-[8rem] truncate px-2 sm:px-4 py-2 text-xs sm:text-sm" title={row.blessing ?? ""}>{row.blessing || "—"}</TableCell>
       <TableCell
         className={cn(
-          "max-w-xs truncate hidden md:table-cell",
+          "max-w-[8rem] truncate px-2 sm:px-4 py-2 text-xs sm:text-sm",
           hasQuestion && "font-semibold text-amber-900",
         )}
         title={row.guest_question ?? ""}
       >
         {row.guest_question || "—"}
       </TableCell>
-      <TableCell className="hidden sm:table-cell">{row.message_sent ? <Check className="h-4 w-4 text-green-600" /> : <XIcon className="h-4 w-4 text-muted-foreground" />}</TableCell>
-      <TableCell>
-        <div className="flex gap-1">
-          <Button size="icon" variant="ghost" onClick={openWhatsApp} title="שלח WhatsApp">
+      <TableCell className="px-2 sm:px-4 py-2">{row.message_sent ? <Check className="h-4 w-4 text-green-600" /> : <XIcon className="h-4 w-4 text-muted-foreground" />}</TableCell>
+      <TableCell className="px-2 sm:px-4 py-2">
+        <div className="flex gap-0.5 sm:gap-1">
+          <Button size="icon" variant="ghost" onClick={openWhatsApp} title="שלח WhatsApp" className="h-8 w-8">
             <MessageCircle className="h-4 w-4 text-green-600" />
           </Button>
-          <Button size="icon" variant="ghost" onClick={() => setEditing(true)}>
+          <Button size="icon" variant="ghost" onClick={() => setEditing(true)} className="h-8 w-8">
             <Pencil className="h-4 w-4" />
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button size="icon" variant="ghost"><Trash2 className="h-4 w-4 text-red-600" /></Button>
+              <Button size="icon" variant="ghost" className="h-8 w-8"><Trash2 className="h-4 w-4 text-red-600" /></Button>
             </AlertDialogTrigger>
             <AlertDialogContent dir="rtl" showBackToHome>
               <AlertDialogHeader>
@@ -477,7 +481,102 @@ function InviteeRow({
           </AlertDialog>
         </div>
       </TableCell>
+      <InviteeDetailsDialog
+        row={row}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        onEdit={() => { setDetailsOpen(false); setEditing(true); }}
+        onWhatsApp={openWhatsApp}
+      />
     </TableRow>
+  );
+}
+
+function InviteeDetailsDialog({
+  row,
+  open,
+  onOpenChange,
+  onEdit,
+  onWhatsApp,
+}: {
+  row: Invitee;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onEdit: () => void;
+  onWhatsApp: () => void;
+}) {
+  const statusLabel =
+    row.status === "attending" ? "מגיע" : row.status === "not_attending" ? "לא מגיע" : "ללא מענה";
+  const createdAt = row.created_at ? new Date(row.created_at).toLocaleString("he-IL") : "—";
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent dir="rtl" showBackToHome className="max-w-md w-[95vw] max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-lg">{row.full_name || "—"}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 text-sm">
+          <DetailRow label="שם מלא" value={row.full_name || "—"} />
+          <DetailRow label="טלפון" value={row.phone || "—"} ltr />
+          <DetailRow label="סטטוס" value={statusLabel} />
+          <DetailRow label="כמות אורחים" value={String(row.guests ?? 1)} />
+          <DetailRow label="אפשרות לינה" value={getSleepLabel(row.sleep)} multiline />
+          <DetailRow label="ברכה" value={row.blessing || "—"} multiline />
+          <DetailRow
+            label="שאלת המוזמן"
+            value={row.guest_question || "—"}
+            multiline
+            highlight={!!row.guest_question?.trim()}
+          />
+          <DetailRow label="הודעה נשלחה" value={row.message_sent ? "כן" : "לא"} />
+          <DetailRow
+            label="מקור"
+            value={row.is_self_registered ? "הרשמה עצמית" : "הוספה ידנית"}
+          />
+          <DetailRow label="נוצר בתאריך" value={createdAt} />
+        </div>
+        <DialogFooter className="flex-row gap-2 sm:justify-start">
+          <Button size="sm" variant="outline" onClick={onWhatsApp} className="gap-1">
+            <MessageCircle className="h-4 w-4 text-green-600" /> WhatsApp
+          </Button>
+          <Button size="sm" variant="outline" onClick={onEdit} className="gap-1">
+            <Pencil className="h-4 w-4" /> עריכה
+          </Button>
+          <Button size="sm" onClick={() => onOpenChange(false)}>סגירה</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DetailRow({
+  label,
+  value,
+  ltr,
+  multiline,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  ltr?: boolean;
+  multiline?: boolean;
+  highlight?: boolean;
+}) {
+  return (
+    <div className="border-b border-pink-100 pb-2 last:border-b-0">
+      <div className="text-xs text-muted-foreground mb-0.5">{label}</div>
+      <div
+        dir={ltr ? "ltr" : undefined}
+        className={cn(
+          "text-sm",
+          ltr && "text-start",
+          multiline ? "whitespace-pre-wrap break-words" : "truncate",
+          highlight && "font-semibold text-amber-900",
+        )}
+      >
+        {value}
+      </div>
+    </div>
   );
 }
 
