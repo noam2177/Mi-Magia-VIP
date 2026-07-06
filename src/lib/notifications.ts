@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { publishRsvpNotification } from "@/lib/api/admin.functions";
 import { getSleepLabel } from "@/lib/sleep-options";
 
 export type NotificationType =
@@ -21,21 +22,21 @@ export type AdminNotification = {
 
 const LAST_SEEN_KEY = "admin_notifications_last_seen_v1";
 
-export function getNotificationsLastSeen(adminName: string): string | null {
+export function getNotificationsLastSeen(adminKey: string): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(`${LAST_SEEN_KEY}_${adminName}`);
+  return localStorage.getItem(`${LAST_SEEN_KEY}_${adminKey}`);
 }
 
-export function markNotificationsSeen(adminName: string) {
+export function markNotificationsSeen(adminKey: string) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(`${LAST_SEEN_KEY}_${adminName}`, new Date().toISOString());
+  localStorage.setItem(`${LAST_SEEN_KEY}_${adminKey}`, new Date().toISOString());
 }
 
 export function countUnreadSinceLastSeen(
   notifications: AdminNotification[],
-  adminName: string,
+  adminKey: string,
 ): number {
-  const lastSeen = getNotificationsLastSeen(adminName);
+  const lastSeen = getNotificationsLastSeen(adminKey);
   if (!lastSeen) return notifications.length;
   return notifications.filter((n) => n.created_at > lastSeen).length;
 }
@@ -53,13 +54,37 @@ export function formatNotificationTime(iso: string): string {
   }
 }
 
-async function pushNotification(input: {
+type PushInput = {
   type: NotificationType;
   invitee_id?: string | null;
   title: string;
   body: string;
   meta?: Record<string, unknown>;
-}) {
+  /** true when the caller is an anonymous public user (RSVP flow). */
+  fromPublic?: boolean;
+};
+
+async function pushNotification(input: PushInput) {
+  if (input.fromPublic) {
+    // Public callers cannot INSERT directly into admin_notifications (RLS).
+    // Route through the guarded server function — it only accepts entries
+    // tied to an existing invitee id.
+    if (!input.invitee_id) return;
+    try {
+      await publishRsvpNotification({
+        data: {
+          type: input.type,
+          invitee_id: input.invitee_id,
+          title: input.title,
+          body: input.body,
+          meta: input.meta,
+        },
+      });
+    } catch (err) {
+      console.warn("[notifications] public publish failed", err);
+    }
+    return;
+  }
   const { error } = await db.from("admin_notifications").insert({
     type: input.type,
     invitee_id: input.invitee_id ?? null,
