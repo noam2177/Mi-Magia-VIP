@@ -1,5 +1,4 @@
 import { db } from "@/lib/db";
-import { publishRsvpNotification } from "@/lib/api/admin.functions";
 import { getSleepLabel } from "@/lib/sleep-options";
 
 export type NotificationType =
@@ -65,26 +64,6 @@ type PushInput = {
 };
 
 async function pushNotification(input: PushInput) {
-  if (input.fromPublic) {
-    // Public callers cannot INSERT directly into admin_notifications (RLS).
-    // Route through the guarded server function — it only accepts entries
-    // tied to an existing invitee id.
-    if (!input.invitee_id) return;
-    try {
-      await publishRsvpNotification({
-        data: {
-          type: input.type,
-          invitee_id: input.invitee_id,
-          title: input.title,
-          body: input.body,
-          meta: input.meta,
-        },
-      });
-    } catch (err) {
-      console.warn("[notifications] public publish failed", err);
-    }
-    return;
-  }
   const { error } = await db.from("admin_notifications").insert({
     type: input.type,
     invitee_id: input.invitee_id ?? null,

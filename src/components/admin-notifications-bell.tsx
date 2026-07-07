@@ -5,7 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { db } from "@/lib/db";
-import { getAdminUser } from "@/lib/admin-session";
+import { getAdminSession } from "@/lib/admin-session";
 import {
   countUnreadSinceLastSeen,
   fetchNotifications,
@@ -45,14 +45,8 @@ export function AdminNotificationsBell() {
   };
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const admin = await getAdminUser();
-      if (!cancelled) setAdminId(admin?.id ?? "");
-    })();
-    return () => {
-      cancelled = true;
-    };
+    const s = getAdminSession();
+    setAdminId(s?.name ?? "");
   }, []);
 
   useEffect(() => {
