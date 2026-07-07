@@ -1,10 +1,11 @@
-import { uploadEventImage } from "@/lib/api/admin.functions";
+import { db } from "@/lib/db";
 import {
   buildStoragePath,
-  fileToBase64,
   getImageContentType,
   isAcceptedImageFile,
 } from "@/lib/image-upload";
+
+const BUCKET = "event-images";
 
 export async function uploadEventImageFile(file: File): Promise<string> {
   if (!isAcceptedImageFile(file)) {
@@ -13,16 +14,19 @@ export async function uploadEventImageFile(file: File): Promise<string> {
     );
   }
 
+  const path = buildStoragePath(file);
   const contentType = getImageContentType(file);
-  const base64 = await fileToBase64(file);
 
-  const result = await uploadEventImage({
-    data: {
-      contentType,
-      base64,
-      fileName: file.name || buildStoragePath(file),
-    },
+  const { error } = await db.storage.from(BUCKET).upload(path, file, {
+    contentType,
+    upsert: false,
+    cacheControl: "3600",
   });
-  if (result?.publicUrl) return result.publicUrl;
-  throw new Error("העלאה נכשלה");
+  if (error) throw new Error(error.message);
+
+  const { data: signed, error: signError } = await db.storage
+    .from(BUCKET)
+    .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+  if (signError) throw new Error(signError.message);
+  return signed.signedUrl;
 }
