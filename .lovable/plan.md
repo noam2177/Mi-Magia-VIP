@@ -1,33 +1,33 @@
-## מה משנים בטבלת המוזמנים באזור הניהול
+## מטרה
+להחזיר את חוויית המשתמש שהייתה לפני "התיקון האבטחתי": התחברות מנהל לפי שם פרטי (נעם/דניאל/תומר) + סיסמה `123456`, RSVP אנונימי ישיר מול הדאטה־בייס, ולפתור את שגיאת ה-404 של הטבלאות.
 
-### 1. הצגת כל הפרטים בטבלה — גם במובייל
-ב-`src/routes/admin.index.tsx`:
-- מסירים את כל ה-`hidden sm/md/lg:table-cell` מכותרות ומתאי הטבלה, כך שהעמודות: שם, טלפון, סטטוס, אורחים, לינה, ברכה, שאלה, הודעה, פעולות — יוצגו תמיד, גם במובייל.
-- עוטפים את הטבלה ב-`overflow-x-auto` (כבר קיים) כדי לאפשר גלילה אופקית במסך צר.
-- כיווץ ריווחים במובייל: `px-2 py-2 text-xs sm:text-sm`, `whitespace-nowrap` על עמודות קצרות (סטטוס, אורחים, הודעה), `max-w-[8rem] truncate` על עמודות טקסט (לינה/ברכה/שאלה) עם `title` להצגת הטקסט המלא ב-hover.
-- טלפון ב-`dir="ltr"` עם `whitespace-nowrap`.
+**הבהרה**: זה מוריד את האבטחה. כל אחד עם קישור לדף `/admin/login` יוכל להיכנס עם השם והסיסמה. RLS ייפתח לקריאה/כתיבה אנונימית לטבלאות של האירוע. אישרת — ממשיך.
 
-### 2. לחיצה על מוזמן פותחת כרטסייה עם פרטיו המלאים
-- שם המוזמן בעמודה הראשונה יהפוך ללחיץ (button-like, מודגש עם underline עדין). לחיצה פותחת `Dialog` חדש: `InviteeDetailsDialog`.
-- הכרטסייה מציגה את כל הפרטים של אותו מוזמן בלבד, בצורה מסודרת ונוחה לקריאה במובייל:
-  - שם מלא
-  - טלפון (LTR, ניתן להעתקה, כפתור "פתח WhatsApp")
-  - סטטוס (מגיע / לא מגיע / ללא מענה)
-  - כמות אורחים
-  - אפשרות לינה (הטקסט המלא)
-  - ברכה (מלאה, wrap)
-  - שאלת המוזמן (מלאה, wrap, מודגשת אם קיימת)
-  - הודעה נשלחה (כן/לא)
-  - מקור (הרשמה עצמית / הוספה ידנית)
-  - תאריך יצירה
-- ה-Dialog: `max-w-md w-[95vw] max-h-[85vh] overflow-y-auto` עם `dir="rtl"`, וב-`DialogFooter` כפתורי קיצור: WhatsApp / עריכה / סגירה.
-- הפתיחה מתבצעת דרך state מקומי ב-`InviteeRow` (או ברמת האב עם ה-id הנבחר).
+## שינויים
 
-### 3. מצב עריכה — ללא שינוי מהותי
-- העריכה הקיימת ב-row נשארת (Inline). ניתן להיכנס לעריכה גם מתוך הכרטסייה דרך כפתור "עריכה" שסוגר את ה-Dialog ומפעיל `setEditing(true)`.
+### 1. התחברות מנהל (UI + סשן)
+- `src/lib/admin-session.ts` — להחזיר לגרסה הישנה: `sessionStorage` עם `ALLOWED_NAMES = ["נעם","דניאל","תומר"]` וסיסמה `"123456"`. פונקציות: `adminLogin(name, password)`, `adminLogout()`, `getAdminSession()`. ללא Supabase Auth.
+- `src/routes/admin.login.tsx` — טופס פשוט עם שדה "שם" + "סיסמה" וכפתור "כניסה" (בלי מצב "יצירת מנהל ראשון", בלי אימייל, בלי `claimFirstAdmin`).
+- `src/routes/admin.index.tsx` — לעדכן את בדיקת הכניסה מ־`getAdminUser()` (async) ל־`getAdminSession()` (sync), ולעדכן כפתור "התנתק".
+- `src/components/admin-notifications-bell.tsx` — להחליף `getAdminUser` ב־`getAdminSession`, להשתמש בשם כמזהה לצורך "נקרא/לא נקרא".
+
+### 2. פתיחת הדאטה בייס (תיקון 404)
+מיגרציה חדשה שמחזירה גישה אנונימית לטבלאות של האפליקציה:
+- `invitees`, `admin_notifications`, `site_settings` — `GRANT SELECT, INSERT, UPDATE, DELETE ... TO anon, authenticated`.
+- מסירה את ה-policies המחמירות שדורשות `private.has_role(...)` ומחליפה ב-policy מתירני `USING (true) WITH CHECK (true)` לכל הפעולות (מאחר שאין auth אמיתי).
+- `event-images` storage bucket — policies שמאפשרות `INSERT/SELECT/UPDATE/DELETE` ל-anon (או להפוך את ה־bucket לפומבי).
+
+### 3. זרימת RSVP ישירות מול DB
+- `src/lib/invitees-db.ts` / `src/routes/rsvp.tsx` — להחזיר לכתיבה ישירה עם `supabase.from("invitees").insert/update(...)` בלי לעבור דרך `submitRsvpPublic`.
+- `src/lib/notifications.ts` — לחזור ל־`supabase.from("admin_notifications").insert(...)` ישיר.
+- `src/lib/upload-event-image.ts` — העלאת תמונות ישירות דרך `supabase.storage` מהדפדפן, ללא server function.
+- אפשר להשאיר את `src/lib/api/admin.functions.ts` כקובץ (הפונקציות פשוט לא ייקראו יותר), או למחוק אותו.
 
 ## פרטים טכניים
-- שינוי UI בלבד ב-`src/routes/admin.index.tsx`. אין שינויי DB / Realtime / הרשאות.
-- קומפוננטה חדשה `InviteeDetailsDialog` בתוך אותו קובץ.
-- שימוש בקומפוננטות קיימות: `Dialog`, `Button`.
-- אימות: פתיחת `/admin` ב-viewport מובייל, בדיקה שכל העמודות מוצגות (גלילה אופקית אם צריך) ושלחיצה על שם פותחת את הכרטסייה עם כל הפרטים.
+- לא נוגעים בקבצים מנוהלים אוטומטית: `src/integrations/supabase/*`.
+- המיגרציה תריץ `DROP POLICY IF EXISTS` על כל ה-policies הקיימות בטבלאות הרלוונטיות לפני יצירת החדשות, כדי להימנע מכפילויות.
+- ה-`user_roles` ופונקציית `private.has_role` יכולות להישאר בדאטה בייס — פשוט לא ייעשה בהן שימוש.
+- אחרי המיגרציה, שגיאת ה-404 אמורה להיעלם כי `anon` יקבל שוב הרשאות + policies מתירים לו לקרוא.
+
+## אזהרה
+לאחר החזרה: הסיסמה `123456` והשמות המורשים יופיעו ב-bundle הצד־לקוח. כל אחד יכול לפתוח את הדאטה בייס דרך ה-API. אתה מאשר שזה מה שרצית.
