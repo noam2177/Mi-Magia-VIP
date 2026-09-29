@@ -9,25 +9,35 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WelcomeRouteImport } from './routes/welcome'
-import { Route as RsvpRouteImport } from './routes/rsvp'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StartRouteImport } from './routes/start'
+import { Route as ThanksRouteImport } from './routes/thanks'
+import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as GTokenRouteImport } from './routes/g.$token'
+import { Route as WAccessTokenRouteImport } from './routes/w.$accessToken'
+import { Route as ESlugIndexRouteImport } from './routes/e.$slug.index'
+import { Route as ESlugWelcomeRouteImport } from './routes/e.$slug.welcome'
 
-const WelcomeRoute = WelcomeRouteImport.update({
-  id: '/welcome',
-  path: '/welcome',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RsvpRoute = RsvpRouteImport.update({
-  id: '/rsvp',
-  path: '/rsvp',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StartRoute = StartRouteImport.update({
+  id: '/start',
+  path: '/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ThanksRoute = ThanksRouteImport.update({
+  id: '/thanks',
+  path: '/thanks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WelcomeRoute = WelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -40,66 +50,144 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
   path: '/admin/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GTokenRoute = GTokenRouteImport.update({
+  id: '/g/$token',
+  path: '/g/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WAccessTokenRoute = WAccessTokenRouteImport.update({
+  id: '/w/$accessToken',
+  path: '/w/$accessToken',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ESlugIndexRoute = ESlugIndexRouteImport.update({
+  id: '/e/$slug/',
+  path: '/e/$slug/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ESlugWelcomeRoute = ESlugWelcomeRouteImport.update({
+  id: '/e/$slug/welcome',
+  path: '/e/$slug/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/rsvp': typeof RsvpRoute
+  '/start': typeof StartRoute
+  '/thanks': typeof ThanksRoute
   '/welcome': typeof WelcomeRoute
   '/admin/login': typeof AdminLoginRoute
+  '/g/$token': typeof GTokenRoute
+  '/w/$accessToken': typeof WAccessTokenRoute
   '/admin/': typeof AdminIndexRoute
+  '/e/$slug/welcome': typeof ESlugWelcomeRoute
+  '/e/$slug/': typeof ESlugIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/rsvp': typeof RsvpRoute
+  '/start': typeof StartRoute
+  '/thanks': typeof ThanksRoute
   '/welcome': typeof WelcomeRoute
   '/admin/login': typeof AdminLoginRoute
+  '/g/$token': typeof GTokenRoute
+  '/w/$accessToken': typeof WAccessTokenRoute
   '/admin': typeof AdminIndexRoute
+  '/e/$slug/welcome': typeof ESlugWelcomeRoute
+  '/e/$slug': typeof ESlugIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/rsvp': typeof RsvpRoute
+  '/start': typeof StartRoute
+  '/thanks': typeof ThanksRoute
   '/welcome': typeof WelcomeRoute
   '/admin/login': typeof AdminLoginRoute
+  '/g/$token': typeof GTokenRoute
+  '/w/$accessToken': typeof WAccessTokenRoute
   '/admin/': typeof AdminIndexRoute
+  '/e/$slug/welcome': typeof ESlugWelcomeRoute
+  '/e/$slug/': typeof ESlugIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/rsvp' | '/welcome' | '/admin/login' | '/admin/'
+  fullPaths:
+    | '/'
+    | '/start'
+    | '/thanks'
+    | '/welcome'
+    | '/admin/login'
+    | '/g/$token'
+    | '/w/$accessToken'
+    | '/admin/'
+    | '/e/$slug/welcome'
+    | '/e/$slug/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/rsvp' | '/welcome' | '/admin/login' | '/admin'
-  id: '__root__' | '/' | '/rsvp' | '/welcome' | '/admin/login' | '/admin/'
+  to:
+    | '/'
+    | '/start'
+    | '/thanks'
+    | '/welcome'
+    | '/admin/login'
+    | '/g/$token'
+    | '/w/$accessToken'
+    | '/admin'
+    | '/e/$slug/welcome'
+    | '/e/$slug'
+  id:
+    | '__root__'
+    | '/'
+    | '/start'
+    | '/thanks'
+    | '/welcome'
+    | '/admin/login'
+    | '/g/$token'
+    | '/w/$accessToken'
+    | '/admin/'
+    | '/e/$slug/welcome'
+    | '/e/$slug/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  RsvpRoute: typeof RsvpRoute
+  StartRoute: typeof StartRoute
+  ThanksRoute: typeof ThanksRoute
   WelcomeRoute: typeof WelcomeRoute
   AdminLoginRoute: typeof AdminLoginRoute
+  GTokenRoute: typeof GTokenRoute
+  WAccessTokenRoute: typeof WAccessTokenRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  ESlugWelcomeRoute: typeof ESlugWelcomeRoute
+  ESlugIndexRoute: typeof ESlugIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/welcome': {
-      id: '/welcome'
-      path: '/welcome'
-      fullPath: '/welcome'
-      preLoaderRoute: typeof WelcomeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/rsvp': {
-      id: '/rsvp'
-      path: '/rsvp'
-      fullPath: '/rsvp'
-      preLoaderRoute: typeof RsvpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/start': {
+      id: '/start'
+      path: '/start'
+      fullPath: '/start'
+      preLoaderRoute: typeof StartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/thanks': {
+      id: '/thanks'
+      path: '/thanks'
+      fullPath: '/thanks'
+      preLoaderRoute: typeof ThanksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -116,15 +204,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/g/$token': {
+      id: '/g/$token'
+      path: '/g/$token'
+      fullPath: '/g/$token'
+      preLoaderRoute: typeof GTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/w/$accessToken': {
+      id: '/w/$accessToken'
+      path: '/w/$accessToken'
+      fullPath: '/w/$accessToken'
+      preLoaderRoute: typeof WAccessTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/e/$slug/': {
+      id: '/e/$slug/'
+      path: '/e/$slug'
+      fullPath: '/e/$slug/'
+      preLoaderRoute: typeof ESlugIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/e/$slug/welcome': {
+      id: '/e/$slug/welcome'
+      path: '/e/$slug/welcome'
+      fullPath: '/e/$slug/welcome'
+      preLoaderRoute: typeof ESlugWelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  RsvpRoute: RsvpRoute,
+  StartRoute: StartRoute,
+  ThanksRoute: ThanksRoute,
   WelcomeRoute: WelcomeRoute,
   AdminLoginRoute: AdminLoginRoute,
+  GTokenRoute: GTokenRoute,
+  WAccessTokenRoute: WAccessTokenRoute,
   AdminIndexRoute: AdminIndexRoute,
+  ESlugWelcomeRoute: ESlugWelcomeRoute,
+  ESlugIndexRoute: ESlugIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

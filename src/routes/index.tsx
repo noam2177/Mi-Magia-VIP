@@ -1,293 +1,139 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { db } from "@/lib/db";
-import { getEventNavigationUrl, getLandingParagraphs, parseSiteSettings, type SiteSettings } from "@/lib/site-settings";
-import { getRsvpSubmitted } from "@/lib/rsvp-storage";
-import { FloralTextFrame } from "@/components/floral-text-frame";
+import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Lock, Heart, Navigation, MapPin } from "lucide-react";
-import useEmblaCarousel from "embla-carousel-react";
+import { PriceCalculator } from "@/components/onboarding/PriceCalculator";
+import type { InviteChannels } from "@/lib/domain/pricing";
+import { BRAND, pageTitle } from "@/lib/brand";
+import {
+  AUDIENCE_SEGMENTS,
+  CHANNEL_ESCALATION_NOTE,
+  EVENT_TYPE_CARDS,
+} from "@/lib/marketing-content";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "דני תומר אפטר חתונה !" },
-      { name: "description", content: "מסיבת אפטר חתונה של דני ותומר" },
+      { title: pageTitle() },
+      { name: "description", content: BRAND.description },
     ],
   }),
-  component: LandingPage,
+  component: MarketingHome,
 });
 
-const DEFAULT_SETTINGS = parseSiteSettings(null);
-
-function LandingPage() {
-  const pageRef = useRef<HTMLDivElement>(null);
-  const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
-  const [rsvpDone, setRsvpDone] = useState(false);
-
-  useEffect(() => {
-    setRsvpDone(Boolean(getRsvpSubmitted()));
-    const load = async () => {
-      const { data } = await db.from("site_settings").select("*").eq("id", 1).maybeSingle();
-      setSettings(parseSiteSettings(data ?? null));
-    };
-    load();
-    const ch = db
-      .channel("settings-landing")
-      .on("postgres_changes", { event: "*", schema: "public", table: "site_settings" }, load)
-      .subscribe();
-    return () => {
-      db.removeChannel(ch);
-    };
-  }, []);
-
-  const collage = settings.collage_images;
-  const carousel = settings.carousel_images;
-  const title = settings.landing_title;
-  const bodyParagraphs = getLandingParagraphs(settings);
-  const eventNavUrl = getEventNavigationUrl(settings);
-  const wazeUrl = settings.waze_url;
-  const googleUrl = settings.google_maps_url;
+function MarketingHome() {
+  const [guests, setGuests] = useState(120);
+  const [channels, setChannels] = useState<InviteChannels>({
+    whatsapp: true,
+    email: true,
+    phone: false,
+  });
 
   return (
-    <div ref={pageRef} className="min-h-screen relative">
-      <CollageBackground images={collage} pageRef={pageRef} />
-      <div className="absolute inset-0 bg-gradient-to-b from-white/75 via-white/70 to-white/92 pointer-events-none" />
+    <div className="min-h-screen bg-gradient-to-b from-pink-50 to-white" dir="rtl">
+      <header className="mx-auto flex max-w-5xl items-center justify-between px-4 py-6">
+        <span className="text-lg font-semibold text-pink-900">{BRAND.name}</span>
+        <div className="flex gap-2">
+          <Button variant="ghost" asChild>
+            <Link to="/e/$slug" params={{ slug: "daniel-tomer" }}>דמו חתונה</Link>
+          </Button>
+          <Button asChild>
+            <Link to="/start">התחילו הרשמה</Link>
+          </Button>
+        </div>
+      </header>
 
-      <Link
-        to="/admin/login"
-        className="fixed top-3 left-3 z-20 opacity-40 hover:opacity-100 transition"
-        aria-label="כניסת מנהל"
-      >
-        <Lock className="h-4 w-4" />
-      </Link>
-
-      <main className="relative z-10 mx-auto w-full max-w-3xl px-4 sm:px-8 py-10 sm:py-16 text-center">
-        <header className="mb-10">
-          <h1 className="text-3xl sm:text-5xl font-bold text-foreground drop-shadow-sm leading-tight">
-            {title}
+      <main className="mx-auto max-w-5xl px-4 pb-16">
+        <section className="py-10 text-center">
+          <h1 className="text-3xl font-bold tracking-tight text-pink-950 md:text-4xl">
+            מי מגיע? רשימה חיה ואחוז מענה לכל אירוע
           </h1>
-
-          {rsvpDone && (
-            <p className="mt-4 text-base text-muted-foreground">תודה שאישרתם הגעה 💗</p>
-          )}
-
-          <Link to="/rsvp" className="inline-block mt-6">
-            <Button
-              size="lg"
-              className="text-lg sm:text-xl px-10 sm:px-14 py-7 sm:py-8 shadow-xl hover:shadow-2xl transition-shadow bg-[color:var(--pink-deep)] hover:bg-[color:var(--pink-deep)]/90 text-white font-bold rounded-2xl"
-            >
-              <Heart className="ms-2 h-6 w-6" fill="currentColor" />
-              {rsvpDone ? "עדכון אישור הגעה" : "אישור הגעה"}
+          <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
+            לחתונות, בר/בת מצווה ואירועי משפחה. תמחור לפי <strong>מענה</strong> (לא לפי שליחה), עם מינימום התחייבות.
+            נכנסים מיד, עד 5 הזמנות דמו, מקדמה בביט אחרי אישור — וכפתור משוב קטן לכל שאלה או תקלה.
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Button size="lg" asChild>
+              <Link to="/start">פתיחת אירוע — גישה לפני תשלום</Link>
             </Button>
-          </Link>
-
-          <div className="mt-4">
-            {eventNavUrl ? (
-              <a href={eventNavUrl} target="_blank" rel="noopener noreferrer">
-                <Button size="lg" variant="outline" className="text-base px-8 py-5 shadow-md">
-                  <MapPin className="ms-2 h-5 w-5" />
-                  ניווט לאירוע
-                </Button>
-              </a>
-            ) : (
-              <Button
-                size="lg"
-                variant="outline"
-                disabled
-                className="text-base px-8 py-5 shadow-md opacity-70"
-                title="קישור ניווט יוגדר בקרוב בפאנל הניהול"
-              >
-                <MapPin className="ms-2 h-5 w-5" />
-                ניווט לאירוע
-              </Button>
-            )}
+            <Button size="lg" variant="outline" asChild>
+              <Link to="/e/$slug" params={{ slug: "daniel-tomer" }}>לראות דמו חתונה חיה</Link>
+            </Button>
           </div>
+        </section>
 
-          {(wazeUrl || googleUrl) && (
-            <div className="mt-3 flex flex-wrap justify-center gap-3">
-              {wazeUrl && (
-                <a href={wazeUrl} target="_blank" rel="noopener noreferrer">
-                  <Button size="lg" variant="outline" className="text-base px-6 py-5 shadow-md min-w-[9rem]">
-                    <Navigation className="ms-2 h-5 w-5 text-[#33CCFF]" />
-                    וויז
-                  </Button>
-                </a>
-              )}
-              {googleUrl && (
-                <a href={googleUrl} target="_blank" rel="noopener noreferrer">
-                  <Button size="lg" variant="outline" className="text-base px-6 py-5 shadow-md min-w-[9rem]">
-                    <Navigation className="ms-2 h-5 w-5 text-[#4285F4]" />
-                    גוגל מפות
-                  </Button>
-                </a>
-              )}
-            </div>
-          )}
-        </header>
+        <section className="py-8" aria-labelledby="audience-heading">
+          <h2 id="audience-heading" className="text-center text-2xl font-semibold text-pink-950">
+            למי מתאים?
+          </h2>
+          <p className="mx-auto mt-2 max-w-2xl text-center text-sm text-muted-foreground">
+            לא למפיקי אירועים כבדים — למי שמארגן אירוע אחד (או כמה בשנה) ורוצה שליטה ברשימה ובמענה.
+          </p>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {AUDIENCE_SEGMENTS.map((seg) => (
+              <Card key={seg.title} className="border-pink-100 bg-white/80">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base text-pink-900">{seg.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-muted-foreground">{seg.description}</CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
 
-        <FloralTextFrame>
-          <section
-            aria-label="פרטי האירוע"
-            className="rounded-2xl border-2 border-[color:var(--pink-deep)]/20 bg-white/92 backdrop-blur-sm shadow-md px-5 sm:px-8 py-7 sm:py-9 text-start"
-          >
-            <div className="space-y-4 text-[15px] sm:text-base leading-relaxed text-foreground/90">
-              {bodyParagraphs.map((paragraph, i) => (
-                <p key={i} className={i === 0 ? "text-lg sm:text-xl font-semibold text-center" : undefined}>
-                  {paragraph}
-                </p>
-              ))}
-            </div>
-          </section>
-        </FloralTextFrame>
+        <section className="py-8" aria-labelledby="event-types-heading">
+          <h2 id="event-types-heading" className="text-center text-2xl font-semibold text-pink-950">
+            סוגי אירועים
+          </h2>
+          <p className="mx-auto mt-2 max-w-2xl text-center text-sm text-muted-foreground">
+            בוחרים סוג בהרשמה — זה מתאים תבניות, שאלות RSVP ותמחור. אותה מערכת לכל הסוגים.
+          </p>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {EVENT_TYPE_CARDS.map((ev) => (
+              <Card key={ev.id} className="border-pink-100">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">{ev.label}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <p className="text-muted-foreground">{ev.blurb}</p>
+                  <p className="text-pink-900/80"><span className="font-medium">מתאים ל:</span> {ev.fit}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
 
-        <section aria-label="גלריית תמונות" className="mt-8 sm:mt-10 pb-6">
-          <div className="max-w-sm sm:max-w-md mx-auto">
-            {carousel.length > 0 ? (
-              <Carousel images={carousel} />
-            ) : (
-              <div className="rounded-2xl border border-dashed border-[color:var(--pink-deep)]/25 bg-white/50 aspect-[3/4] flex items-center justify-center text-muted-foreground text-sm">
-                גלריית תמונות תופיע כאן בקרוב
-              </div>
-            )}
+        <section className="mb-8 rounded-xl border border-pink-100 bg-white/90 px-4 py-4 text-center text-sm text-muted-foreground">
+          {CHANNEL_ESCALATION_NOTE}
+        </section>
+
+        <section className="grid gap-8 md:grid-cols-2">
+          <PriceCalculator
+            guests={guests}
+            channels={channels}
+            onGuestsChange={setGuests}
+            onChannelsChange={setChannels}
+          />
+          <div className="space-y-4 text-sm">
+            <h2 className="text-lg font-semibold">מה מקבלים לפני התשלום</h2>
+            <ul className="list-disc space-y-2 ps-5 text-muted-foreground">
+              <li>סביבת עבודה לשתף עם בן/בת זוג (קישור אחד)</li>
+              <li>בחירת סוג אירוע — חובה לפני שליחת הזמנות</li>
+              <li>עד 5 הזמנות דמו (כל הערוצים יחד)</li>
+              <li>מחשבון מחיר בזמן אמת — מסלול יוזמים ראשונים</li>
+            </ul>
+            <h2 className="text-lg font-semibold">מביא חבר</h2>
+            <p className="text-muted-foreground">
+              חבר שהירשם עם הקוד שלכם ושילם מקדמה — מזכה אתכם ב־50 ₪ מהיתרה.
+            </p>
+            <h2 className="text-lg font-semibold">תשלום</h2>
+            <p className="text-muted-foreground">
+              אחרי ההרשמה נשלח לנו מייל עם הסכום לגבייה; נחזור עם קישור ביט. אין חיוב אוטומטי.
+            </p>
           </div>
         </section>
       </main>
     </div>
-  );
-}
-
-function useGridCols() {
-  const [cols, setCols] = useState(3);
-  useEffect(() => {
-    const update = () => {
-      const w = window.innerWidth;
-      if (w >= 768) setCols(5);
-      else if (w >= 640) setCols(4);
-      else setCols(3);
-    };
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
-  return cols;
-}
-
-function CollageBackground({
-  images,
-  pageRef,
-}: {
-  images: string[];
-  pageRef: React.RefObject<HTMLDivElement | null>;
-}) {
-  const cols = useGridCols();
-  const [pageHeight, setPageHeight] = useState(() =>
-    typeof window !== "undefined" ? window.innerHeight : 800,
-  );
-
-  useEffect(() => {
-    const el = pageRef.current;
-    if (!el) return;
-    const measure = () => {
-      setPageHeight(Math.max(el.offsetHeight, window.innerHeight));
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    window.addEventListener("resize", measure);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, [pageRef]);
-
-  const tileCount = useMemo(() => {
-    if (images.length === 0) return 0;
-    const gap = 4;
-    const width = typeof window !== "undefined" ? window.innerWidth : 390;
-    const cellSize = (width - gap * (cols - 1)) / cols;
-    const rows = Math.ceil(pageHeight / (cellSize + gap)) + 1;
-    return cols * rows;
-  }, [images.length, cols, pageHeight]);
-
-  const tiles = useMemo(() => {
-    if (images.length === 0) return [];
-    return Array.from({ length: tileCount }, (_, i) => ({
-      url: images[i % images.length],
-      key: `tile-${i}`,
-    }));
-  }, [images, tileCount]);
-
-  if (tiles.length === 0) return null;
-
-  return (
-    <div
-      className="absolute inset-0 overflow-hidden opacity-40 pointer-events-none"
-      style={{
-        display: "grid",
-        gridTemplateColumns: `repeat(${cols}, 1fr)`,
-        gap: "4px",
-        alignContent: "start",
-      }}
-      aria-hidden
-    >
-      {tiles.map((tile) => (
-        <div
-          key={tile.key}
-          className="aspect-[3/4] w-full bg-cover bg-center"
-          style={{ backgroundImage: `url(${tile.url})` }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function ImageLightbox({ url, onClose }: { url: string | null; onClose: () => void }) {
-  return (
-    <Dialog open={!!url} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-[min(95vw,56rem)] border-none bg-black/90 p-2 sm:p-4 shadow-2xl">
-        {url && (
-          <img
-            src={url}
-            alt=""
-            className="mx-auto max-h-[85vh] w-full object-contain rounded-lg"
-          />
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function Carousel({ images }: { images: string[] }) {
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, direction: "rtl" });
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!emblaApi) return;
-    const id = setInterval(() => emblaApi.scrollNext(), 4000);
-    return () => clearInterval(id);
-  }, [emblaApi]);
-
-  return (
-    <>
-      <div className="overflow-hidden rounded-2xl shadow-xl" ref={emblaRef}>
-        <div className="flex">
-          {images.map((url, i) => (
-            <div key={i} className="min-w-0 flex-[0_0_100%]">
-              <button
-                type="button"
-                className="block w-full aspect-[3/4] bg-cover bg-center cursor-pointer transition-opacity hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--pink-deep)]"
-                style={{ backgroundImage: `url(${url})` }}
-                onClick={() => setLightboxUrl(url)}
-                aria-label={`הגדלת תמונה ${i + 1}`}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-      <p className="mt-2 text-xs text-muted-foreground text-center">לחצו על תמונה להגדלה</p>
-      <ImageLightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />
-    </>
   );
 }

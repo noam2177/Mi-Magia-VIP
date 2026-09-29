@@ -13,6 +13,9 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "sonner";
 
+import { CustomerFeedbackButton } from "@/components/feedback/CustomerFeedbackButton";
+import { BRAND, pageTitle } from "@/lib/brand";
+
 
 function NotFoundComponent() {
   return (
@@ -79,13 +82,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "דני תומר אפטר חתונה !" },
-      { name: "description", content: "אישור הגעה לחתונה של דני ותומר" },
-      { property: "og:title", content: "דני תומר אפטר חתונה !" },
-      { property: "og:description", content: "אישור הגעה לחתונה של דני ותומר" },
+      { title: pageTitle() },
+      { name: "description", content: BRAND.description },
+      { property: "og:title", content: BRAND.name },
+      { property: "og:description", content: BRAND.tagline },
       { property: "og:type", content: "website" },
-      { name: "twitter:title", content: "דני תומר אפטר חתונה !" },
-      { name: "twitter:description", content: "אישור הגעה לחתונה של דני ותומר" },
+      { name: "twitter:title", content: BRAND.name },
+      { name: "twitter:description", content: BRAND.tagline },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0b0cd05e-ca1f-446e-8daf-2fce5a458e9d/id-preview-858eeb8c--b1c11060-9138-411d-bbab-f31371ea8580.lovable.app-1780768374220.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0b0cd05e-ca1f-446e-8daf-2fce5a458e9d/id-preview-858eeb8c--b1c11060-9138-411d-bbab-f31371ea8580.lovable.app-1780768374220.png" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -124,6 +127,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
+      <CustomerFeedbackButton />
       <Toaster richColors position="top-center" dir="rtl" />
     </QueryClientProvider>
   );

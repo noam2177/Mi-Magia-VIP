@@ -3,7 +3,6 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
-import { BackToHomeLink } from "@/components/back-to-home-link";
 
 const AlertDialog = AlertDialogPrimitive.Root;
 
@@ -28,10 +27,8 @@ AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName;
 
 const AlertDialogContent = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content> & {
-    showBackToHome?: boolean;
-  }
->(({ className, children, showBackToHome, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>
+>(({ className, ...props }, ref) => (
   <AlertDialogPortal>
     <AlertDialogOverlay />
     <AlertDialogPrimitive.Content
@@ -41,14 +38,7 @@ const AlertDialogContent = React.forwardRef<
         className,
       )}
       {...props}
-    >
-      {children}
-      {showBackToHome && (
-        <div className="flex justify-center pt-1">
-          <BackToHomeLink />
-        </div>
-      )}
-    </AlertDialogPrimitive.Content>
+    />
   </AlertDialogPortal>
 ));
 AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName;
