@@ -70,9 +70,9 @@ function MarketingHome() {
           <p className="mx-auto mt-2 max-w-2xl text-center text-sm text-muted-foreground">
             לא למפיקי אירועים כבדים — למי שמארגן אירוע אחד (או כמה בשנה) ורוצה שליטה ברשימה ובמענה.
           </p>
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {AUDIENCE_SEGMENTS.map((seg) => (
-              <Card key={seg.title} className="border-pink-100 bg-white/80">
+              <Card key={seg.id} className="border-pink-100 bg-white/80">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base text-pink-900">{seg.title}</CardTitle>
                 </CardHeader>

@@ -57,7 +57,9 @@ export const submitOnboardingLead = createServerFn({ method: "POST" })
         event_date: data.event_date || null,
         estimated_guests: data.estimated_guests,
         channels: data.channels,
-        notes: data.notes || null,
+        notes: data.notes
+          ? `קהל: ${data.organizer_audience}\n${data.notes}`
+          : `קהל: ${data.organizer_audience}`,
         status: "operator_notified",
         referral_code,
         referred_by_code: data.referred_by_code?.trim().toUpperCase() || null,

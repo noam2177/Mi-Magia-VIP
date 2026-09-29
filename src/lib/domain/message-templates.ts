@@ -6,6 +6,9 @@
 
 export type MessageType = "invite" | "reminder" | "map" | "thanks";
 
+import type { MessageTone } from "./event-template-defaults";
+import { inviteLineForTemplate } from "./event-template-defaults";
+
 export type EventMessageContext = {
   eventName: string;
   /** ISO date string or null */
@@ -14,6 +17,8 @@ export type EventMessageContext = {
   mapsUrl?: string | null;
   /** Guest personal RSVP link (token based) */
   rsvpUrl?: string | null;
+  /** טון הודעה — נגזר מקהל + סוג אירוע */
+  tone?: MessageTone;
 };
 
 export const MESSAGE_TYPE_LABELS: Record<MessageType, string> = {

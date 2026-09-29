@@ -10,6 +10,11 @@ const ctx = {
 };
 
 describe("message templates", () => {
+  it("professional invite uses formal wording", () => {
+    const m = buildGuestMessage("invite", { ...ctx, tone: "professional" }, "דנה");
+    expect(m).toContain("נשמח לראותך ב");
+  });
+
   it("invite includes name, event, rsvp link and map", () => {
     const m = buildGuestMessage("invite", ctx, "דנה");
     expect(m).toContain("דנה");

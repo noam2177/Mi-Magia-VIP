@@ -12,3 +12,4 @@ export * from "./onboarding";
 export * from "./referral";
 export * from "./trial-invite";
 export * from "./message-templates";
+export * from "./event-template-defaults";

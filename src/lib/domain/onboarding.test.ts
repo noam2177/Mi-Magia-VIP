@@ -49,6 +49,7 @@ describe("onboardingFormSchema", () => {
       organizer_name: "דנה כהן",
       phone: "0501234567",
       email: "a@b.com",
+      organizer_audience: "couples_families",
       event_type: "wedding",
       estimated_guests: 120,
       channels: { whatsapp: true, email: true, phone: false },

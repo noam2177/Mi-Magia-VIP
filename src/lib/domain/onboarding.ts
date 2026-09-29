@@ -3,17 +3,14 @@ import { z } from "zod";
 import type { InviteChannels } from "./pricing";
 import { FOUNDING_RATE_CARD } from "./pricing";
 import { generateGuestToken } from "./guest-token";
+import {
+  EVENT_TYPES,
+  type EventTypeId,
+  ORGANIZER_AUDIENCES,
+  type OrganizerAudienceId,
+} from "./event-template-defaults";
 
-export const EVENT_TYPES = [
-  { id: "wedding", label: "חתונה" },
-  { id: "bar_bat_mitzvah", label: "בר/בת מצווה" },
-  { id: "brit", label: "ברית / בריתה" },
-  { id: "engagement", label: "אירוסין" },
-  { id: "community", label: "אירוע קהילתי" },
-  { id: "other", label: "אחר" },
-] as const;
-
-export type EventTypeId = (typeof EVENT_TYPES)[number]["id"];
+export { EVENT_TYPES, type EventTypeId, ORGANIZER_AUDIENCES, type OrganizerAudienceId };
 
 export const LeadStatus = {
   SUBMITTED: "submitted",
