@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  defaultEventTypeForAudience,
-  eventTypesForAudience,
+  defaultEventTypeForCategory,
+  eventTypesForCategory,
   inviteLineForTemplate,
   resolveEventTemplate,
 } from "./event-template-defaults";
@@ -16,22 +16,39 @@ describe("event template defaults", () => {
     expect(t.channelOrder[0]).toBe("email");
   });
 
-  it("wedding stays warm with whatsapp first", () => {
-    const t = resolveEventTemplate("couples_families", "wedding");
+  it("wedding stays warm with featured badge", () => {
+    const t = resolveEventTemplate("personal", "wedding");
     expect(t.tone).toBe("warm");
-    expect(t.defaultChannels.whatsapp).toBe(true);
+    expect(t.visual.badge).toBeTruthy();
     expect(inviteLineForTemplate(t.tone, "החתונה")).toContain("מזמינים");
   });
 
-  it("filters event types per audience", () => {
-    const biz = eventTypesForAudience("business").map((x) => x.id);
+  it("bar and bat mitzvah differ visually", () => {
+    const bar = resolveEventTemplate("personal", "bar_mitzvah");
+    const bat = resolveEventTemplate("personal", "bat_mitzvah");
+    expect(bar.visual.gradient).not.toBe(bat.visual.gradient);
+    expect(bar.sampleLandingTitle).toContain("בר");
+    expect(bat.sampleLandingTitle).toContain("בת");
+  });
+
+  it("unknown type falls back to generic personal template", () => {
+    const t = resolveEventTemplate("personal", "other");
+    expect(t.sampleSubtitle).toContain("בסיסי");
+  });
+
+  it("display name overrides sample title", () => {
+    const t = resolveEventTemplate("personal", "wedding", "חתונת נועם ודנה");
+    expect(t.sampleLandingTitle).toBe("חתונת נועם ודנה");
+  });
+
+  it("filters event types per category", () => {
+    const biz = eventTypesForCategory("business").map((x) => x.id);
     expect(biz).toContain("corporate");
-    expect(biz).toContain("conference");
     expect(biz).not.toContain("wedding");
   });
 
-  it("picks sensible default event type per audience", () => {
-    expect(defaultEventTypeForAudience("business")).toBe("corporate");
-    expect(defaultEventTypeForAudience("parents_celebration")).toBe("bar_bat_mitzvah");
+  it("defaults wedding for personal", () => {
+    expect(defaultEventTypeForCategory("personal")).toBe("wedding");
+    expect(defaultEventTypeForCategory("business")).toBe("corporate");
   });
 });

@@ -84,7 +84,11 @@ export function buildGuestMessage(
         ctx.tone === "professional"
           ? `${name}, תודה שהשתתפת ב${ctx.eventName}.`
           : `${name}, תודה שהגעת ל${ctx.eventName}! 💗`,
-        ctx.tone === "professional" ? "נשמח לראותך באירועים הבאים." : "היה לנו כיף לחגוג איתך.",
+        ctx.tone === "professional"
+          ? "נשמח לראותך באירועים הבאים."
+          : ctx.tone === "festive"
+            ? "עד הפעם הבאה! 🎉"
+            : "היה לנו כיף לחגוג איתך.",
       ]);
   }
 }

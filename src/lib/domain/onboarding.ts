@@ -4,38 +4,52 @@ import type { InviteChannels } from "./pricing";
 import { FOUNDING_RATE_CARD } from "./pricing";
 import { generateGuestToken } from "./guest-token";
 import {
+  EVENT_CATEGORIES,
   EVENT_TYPES,
+  EVENT_TYPE_IDS,
+  type EventCategoryId,
   type EventTypeId,
   ORGANIZER_AUDIENCES,
   type OrganizerAudienceId,
+  legacyAudienceFromCategory,
 } from "./event-template-defaults";
 
-export { EVENT_TYPES, type EventTypeId, ORGANIZER_AUDIENCES, type OrganizerAudienceId };
+export {
+  EVENT_TYPES,
+  EVENT_CATEGORIES,
+  EVENT_TYPE_IDS,
+  type EventTypeId,
+  type EventCategoryId,
+  ORGANIZER_AUDIENCES,
+  type OrganizerAudienceId,
+};
 
-export const LeadStatus = {
-  SUBMITTED: "submitted",
-  OPERATOR_NOTIFIED: "operator_notified",
-  TRIAL_ACTIVE: "trial_active",
-  DEPOSIT_PAID: "deposit_paid",
-  ACTIVE: "active",
-  REJECTED: "rejected",
-} as const;
-
-export type LeadStatusValue = (typeof LeadStatus)[keyof typeof LeadStatus];
+const eventTypeSchema = z.enum([
+  "wedding",
+  "bachelor_party",
+  "bachelorette_party",
+  "engagement",
+  "bar_mitzvah",
+  "bat_mitzvah",
+  "brit",
+  "brita",
+  "community",
+  "corporate",
+  "conference",
+  "networking",
+  "product_launch",
+  "other",
+]);
 
 export const onboardingFormSchema = z.object({
   organizer_name: z.string().min(2, "שם מלא קצר מדי"),
   partner_name: z.string().optional(),
   phone: z.string().min(9, "טלפון נדרש"),
   email: z.string().email("מייל לא תקין"),
-  event_type: z.enum([
-    "wedding",
-    "bar_bat_mitzvah",
-    "brit",
-    "engagement",
-    "community",
-    "other",
-  ]),
+  event_category: z.enum(["personal", "business"]),
+  event_type: eventTypeSchema,
+  /** שם האירוע כפי שיופיע באורח — מעדכן תצוגת הטמפלט */
+  event_display_name: z.string().max(120).optional(),
   event_date: z.string().optional(),
   estimated_guests: z.coerce.number().int().min(1).max(2000),
   channels: z.object({
@@ -48,6 +62,10 @@ export const onboardingFormSchema = z.object({
 });
 
 export type OnboardingFormValues = z.infer<typeof onboardingFormSchema>;
+
+export function legacyAudienceForLead(values: OnboardingFormValues): OrganizerAudienceId {
+  return legacyAudienceFromCategory(values.event_category, values.event_type);
+}
 
 export function generateOrganizerAccessToken(): string {
   return generateGuestToken();
@@ -92,10 +110,6 @@ export function canSendTrialInvite(args: {
     return { ok: false, reason: "trial_cap", remaining: 0 };
   }
   return { ok: true, remaining: cap - args.trialInvitesSent };
-}
-
-export function channelsFromForm(c: InviteChannels): InviteChannels {
-  return { whatsapp: c.whatsapp, email: c.email, phone: c.phone };
 }
 
 export function atLeastOneChannel(channels: InviteChannels): boolean {

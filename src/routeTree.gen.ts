@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DemoRouteImport } from './routes/demo'
 import { Route as RsvpRouteImport } from './routes/rsvp'
 import { Route as StartRouteImport } from './routes/start'
 import { Route as ThanksRouteImport } from './routes/thanks'
@@ -24,6 +25,11 @@ import { Route as ESlugWelcomeRouteImport } from './routes/e.$slug.welcome'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoRoute = DemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RsvpRoute = RsvpRouteImport.update({
@@ -79,6 +85,7 @@ const ESlugWelcomeRoute = ESlugWelcomeRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/demo': typeof DemoRoute
   '/rsvp': typeof RsvpRoute
   '/start': typeof StartRoute
   '/thanks': typeof ThanksRoute
@@ -92,6 +99,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/demo': typeof DemoRoute
   '/rsvp': typeof RsvpRoute
   '/start': typeof StartRoute
   '/thanks': typeof ThanksRoute
@@ -106,6 +114,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/demo': typeof DemoRoute
   '/rsvp': typeof RsvpRoute
   '/start': typeof StartRoute
   '/thanks': typeof ThanksRoute
@@ -121,6 +130,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/demo'
     | '/rsvp'
     | '/start'
     | '/thanks'
@@ -134,6 +144,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/demo'
     | '/rsvp'
     | '/start'
     | '/thanks'
@@ -147,6 +158,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/demo'
     | '/rsvp'
     | '/start'
     | '/thanks'
@@ -161,6 +173,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DemoRoute: typeof DemoRoute
   RsvpRoute: typeof RsvpRoute
   StartRoute: typeof StartRoute
   ThanksRoute: typeof ThanksRoute
@@ -180,6 +193,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/rsvp': {
@@ -257,6 +277,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DemoRoute: DemoRoute,
   RsvpRoute: RsvpRoute,
   StartRoute: StartRoute,
   ThanksRoute: ThanksRoute,

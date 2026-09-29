@@ -1,66 +1,23 @@
-import type { EventTypeId, OrganizerAudienceId } from "@/lib/domain/event-template-defaults";
-import { EVENT_TYPES, ORGANIZER_AUDIENCES } from "@/lib/domain/event-template-defaults";
+import type { EventCategoryId, EventTypeId } from "@/lib/domain/event-template-defaults";
+import { EVENT_CATEGORIES, EVENT_TYPES, resolveEventTemplate } from "@/lib/domain/event-template-defaults";
 
-export const AUDIENCE_SEGMENTS = [
-  {
-    id: "couples_families" as OrganizerAudienceId,
-    title: "זוגות ומשפחות",
-    description:
-      "חתונה, אירוסין או ברית — רשימה אחת, אחוז מענה ברור, ופחות טלפונים ביום האירוע.",
-  },
-  {
-    id: "parents_celebration" as OrganizerAudienceId,
-    title: "הורים לבר/בת מצווה",
-    description:
-      "רשימת מוזמנים גדולה, עדכונים ב-WhatsApp ומייל, ותזכורות לפני האירוע בלי גיליון משותף.",
-  },
-  {
-    id: "community" as OrganizerAudienceId,
-    title: "מארגני אירוע קהילתי",
-    description:
-      "הרצאה, מסיבה או אירוע ציבורי — ייבוא אורחים, מעקב מי אישר, ושידור הודעה לכל הנרשמים.",
-  },
-  {
-    id: "business" as OrganizerAudienceId,
-    title: "קהל עסקי",
-    description:
-      "אירוע חברה, כנס או השקה — טון מקצועי, מייל כברירת מחדל, RSVP ללקוחות ועובדים בלי אקסל.",
-  },
-] as const;
+export const CATEGORY_SECTIONS = EVENT_CATEGORIES.map((c) => ({
+  id: c.id,
+  title: c.label,
+  description: c.description,
+}));
 
-const EVENT_BLURBS: Record<EventTypeId, { blurb: string; fit: string }> = {
-  wedding: {
-    blurb: "הזמנה דיגיטלית, RSVP, לינה וברכות — כמו בדמו החי שלנו.",
-    fit: "זוגות שרוצים חוויית אורח חמה ואדמין מסודר.",
-  },
-  bar_bat_mitzvah: {
-    blurb: "רשימה ארוכה, הורים מעורבים, תזכורות לפני האירוע.",
-    fit: "משפחות עם מאות מוזמנים וצורך בסדר.",
-  },
-  brit: {
-    blurb: "הזמנה קצרה, מיקום ושעה, אישור הגעה מהיר.",
-    fit: "אירוע משפחתי צפוף בזמן.",
-  },
-  engagement: {
-    blurb: "אירוע קטן או גדול — אותה מערכת RSVP ומעקב.",
-    fit: "זוגות בשלב לפני החתונה.",
-  },
-  community: {
-    blurb: "כנס, גala או מפגש — ייבוא רשימה ודוח מענה.",
-    fit: "עמותות, קהילות ומארגנים מקצועיים קלים.",
-  },
-  corporate: {
-    blurb: "ערב צוות, יום גיבוש או מפגש חברה — הזמנה במייל, מעקב מענה.",
-    fit: "HR, מנהלי משרד ומארגני אירועים פנימיים.",
-  },
-  conference: {
-    blurb: "כנס, השקת מוצר או מפגש לקוחות — טון רשמי ותזכורות מסודרות.",
-    fit: "שיווק, מוצר וצוותים שמזמינים מאות משתתפים.",
-  },
-  other: {
-    blurb: "ימי הולדת, מסיבות או כל אירוע עם רשימת מוזמנים.",
-    fit: "כל מי שצריך «מי מגיע» בלי אקסל.",
-  },
+const EVENT_BLURBS: Partial<Record<EventTypeId, { blurb: string; fit: string }>> = {
+  wedding: { blurb: "הדגש שלנו — הזמנה, RSVP, לינה וברכות.", fit: "זוגות ביום הגדול." },
+  bachelor_party: { blurb: "רשימה סגורה לערב רווקים.", fit: "חתן וחברים." },
+  bachelorette_party: { blurb: "מסיבת רווקות מסודרת.", fit: "כלה וחברות." },
+  bar_mitzvah: { blurb: "עיצוב כחול, רשימה ארוכה.", fit: "הורים לבן." },
+  bat_mitzvah: { blurb: "עיצוב ורוד־לילך נפרד.", fit: "הורים לבת." },
+  brit: { blurb: "ברית — קצר וחם.", fit: "משפחה." },
+  brita: { blurb: "בריתה — גוון עדין.", fit: "משפחה." },
+  corporate: { blurb: "אירוע חברה במייל.", fit: "HR ומשרד." },
+  conference: { blurb: "כנס והרשמה.", fit: "הפקה פנימית." },
+  product_launch: { blurb: "השקה למוזמנים מסוננים.", fit: "שיווק ומוצר." },
 };
 
 export type EventTypeCard = {
@@ -68,15 +25,28 @@ export type EventTypeCard = {
   label: string;
   blurb: string;
   fit: string;
+  category: EventCategoryId;
+  icon: string;
+  featured?: boolean;
 };
 
-export const EVENT_TYPE_CARDS: EventTypeCard[] = EVENT_TYPES.map((t) => ({
-  id: t.id,
-  label: t.label,
-  ...EVENT_BLURBS[t.id],
-}));
+export const EVENT_TYPE_CARDS: EventTypeCard[] = EVENT_TYPES.filter(
+  (t, i, arr) => arr.findIndex((x) => x.id === t.id && x.category === t.category) === i,
+).map((t) => {
+  const tpl = resolveEventTemplate(t.category, t.id);
+  const meta = EVENT_BLURBS[t.id] ?? { blurb: tpl.sampleSubtitle, fit: "מתאים לרוב המארגנים." };
+  return {
+    id: t.id,
+    label: t.label,
+    category: t.category,
+    icon: tpl.visual.icon,
+    featured: t.featured,
+    ...meta,
+  };
+});
+
+export const PERSONAL_EVENT_CARDS = EVENT_TYPE_CARDS.filter((c) => c.category === "personal");
+export const BUSINESS_EVENT_CARDS = EVENT_TYPE_CARDS.filter((c) => c.category === "business");
 
 export const CHANNEL_ESCALATION_NOTE =
-  "ברירת מחדל משפחתית: WhatsApp → מייל → שיחה. לעסקים וקהילה: מייל קודם — המחשבון והטמפלט מתאימים את עצמם לקהל שבחרתם.";
-
-export { ORGANIZER_AUDIENCES };
+  "משפחה וחתונה: WhatsApp קודם. עסקים: מייל קודם. הטמפלט מתאים ערוצים ועיצוב אוטומטית.";

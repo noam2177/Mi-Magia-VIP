@@ -9,6 +9,7 @@ import {
   slugFromOrganizerName,
   atLeastOneChannel,
   canSendTrialInvite,
+  legacyAudienceForLead,
 } from "@/lib/domain/onboarding";
 import { computeFoundingQuote } from "@/lib/domain/pricing";
 import { sumReferralCredits, referralCreditForFriendDeposit } from "@/lib/domain/referral";
@@ -57,9 +58,14 @@ export const submitOnboardingLead = createServerFn({ method: "POST" })
         event_date: data.event_date || null,
         estimated_guests: data.estimated_guests,
         channels: data.channels,
-        notes: data.notes
-          ? `קהל: ${data.organizer_audience}\n${data.notes}`
-          : `קהל: ${data.organizer_audience}`,
+        notes: [
+          `קטגוריה: ${data.event_category}`,
+          `קהל (legacy): ${legacyAudienceForLead(data)}`,
+          data.event_display_name ? `שם אירוע: ${data.event_display_name}` : null,
+          data.notes || null,
+        ]
+          .filter(Boolean)
+          .join("\n"),
         status: "operator_notified",
         referral_code,
         referred_by_code: data.referred_by_code?.trim().toUpperCase() || null,
