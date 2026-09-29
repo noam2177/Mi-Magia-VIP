@@ -2,8 +2,8 @@ import { Play } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 
-/** מקום לסרטון דמו — החליפו src ב-URL אמיתי כשיהיה */
-const DEMO_VIDEO_SRC = "";
+/** סרטון דמו — CogVideoX-3 לפי docs/DEMO_VIDEO_STORYBOARD.json */
+const DEMO_VIDEO_SRC = "/demo.mp4";
 
 export function DemoVideoSection() {
   return (

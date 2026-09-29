@@ -1,0 +1,50 @@
+{
+  "title": "מי מגיע — דמו מלא בדקה",
+  "total_seconds": 60,
+  "primary_model": "cogvideox-3",
+  "fallback_model": "viduq1-text",
+  "audio_note": "מוזיקת wedding tech עדינה + קריינות עברית קצרה לכל סצנה (נוצר אוטומטית ב-CogVideoX when with_audio=true)",
+  "master_prompt_en": "Premium 60-second SaaS product demo motion graphics for Israeli wedding RSVP platform Mi-Magia. Pink and rose color palette, RTL Hebrew UI on smartphones and laptop. Scene flow with smooth transitions: (1) Landing page with live pricing calculator sliders for guest count and WhatsApp/email channels. (2) Registration wizard /start with personal vs business tabs and wedding event type selection. (3) Organizer workspace dashboard sending up to 5 demo invitations via WhatsApp email phone icons. (4) Guest opens beautiful wedding RSVP page, taps attending yes, confetti. (5) Organizer sees live response percentage chart updating. Clean modern UI, soft bokeh wedding background, cinematic lighting, 1920x1080, no readable fake logos.",
+  "scenes": [
+    {
+      "id": 1,
+      "duration_sec": 12,
+      "he_title": "נחיתה + מחשבון מחיר",
+      "he_voiceover": "בוחרים כמה אורחים ואילו ערוצים — רואים מחיר בזמן אמת, בלי הרשמה.",
+      "visual_prompt_en": "Smartphone showing pink wedding SaaS landing page, price calculator widgets animating, Hebrew RTL layout, guest counter and channel toggles, soft rose gradient background.",
+      "ui_note": "/ landing + pricing calculator"
+    },
+    {
+      "id": 2,
+      "duration_sec": 12,
+      "he_title": "הרשמה לזוג",
+      "he_voiceover": "פותחים אירוע — אישי או עסקי, בוחרים סוג חתונה וטמפלט.",
+      "visual_prompt_en": "Registration form wizard on phone, tabs personal vs business, wedding template preview card, elegant Hebrew typography, Mi-Magia pink theme.",
+      "ui_note": "/start onboarding wizard"
+    },
+    {
+      "id": 3,
+      "duration_sec": 12,
+      "he_title": "סביבת עבודה — עד 5 הזמנות דמו",
+      "he_voiceover": "שולחים עד חמש הזמנות לפני מקדמה — וואטסאפ, מייל או טלפון.",
+      "visual_prompt_en": "Organizer workspace UI, guest list, send invite buttons for WhatsApp email phone, counter showing 5 demo invites, share link with partner.",
+      "ui_note": "/w/:organizer_access_token pre-deposit limit"
+    },
+    {
+      "id": 4,
+      "duration_sec": 12,
+      "he_title": "חוויית אורח — RSVP",
+      "he_voiceover": "האורח נכנס לדף ההזמנה ומאשר הגעה בשניות.",
+      "visual_prompt_en": "Guest wedding invitation page floral design, RSVP yes/no buttons, finger tap confirm, subtle celebration particles, Hebrew guest view.",
+      "ui_note": "/e/daniel-tomer guest RSVP"
+    },
+    {
+      "id": 5,
+      "duration_sec": 12,
+      "he_title": "מענה חי למארגן",
+      "he_voiceover": "רואים מי ענה — אחוז מענה מתעדכן ח live.",
+      "visual_prompt_en": "Dashboard with live RSVP stats pie chart climbing, guest responses list updating, organizer relief smile reflection on screen, pink UI.",
+      "ui_note": "organizer metrics / admin responses"
+    }
+  ]
+}
