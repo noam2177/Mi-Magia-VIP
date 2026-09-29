@@ -58,7 +58,7 @@ export function buildGuestMessage(
     case "invite":
       return compact([
         `שלום ${name},`,
-        `מזמינים אותך ל${ctx.eventName}!`,
+        inviteLineForTemplate(ctx.tone ?? "warm", ctx.eventName),
         date && `📅 ${date}`,
         where && `📍 ${where}`,
         ctx.rsvpUrl && `לאישור הגעה (לוקח דקה): ${ctx.rsvpUrl}`,
@@ -81,8 +81,10 @@ export function buildGuestMessage(
       ]);
     case "thanks":
       return compact([
-        `${name}, תודה שהגעת ל${ctx.eventName}! 💗`,
-        "היה לנו כיף לחגוג איתך.",
+        ctx.tone === "professional"
+          ? `${name}, תודה שהשתתפת ב${ctx.eventName}.`
+          : `${name}, תודה שהגעת ל${ctx.eventName}! 💗`,
+        ctx.tone === "professional" ? "נשמח לראותך באירועים הבאים." : "היה לנו כיף לחגוג איתך.",
       ]);
   }
 }
