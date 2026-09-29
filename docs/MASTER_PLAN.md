@@ -1,6 +1,20 @@
-# תוכנית מאסטר — איחוד RSVP (דניאל ותומר) + mi-magia-vip
+# תוכנית מאסטר — «מי מגיע» (Mi-Magia-VIP)
 
 **תאריך:** 2026-09-29 · **מטרה:** לעלות לאוויר בהקדם כמוצר הזמנות לחתונות ואירועים, כשהבסיס הוא גרסת החתונה שעבדה במציאות.
+
+## החלטות שננעלו (29.9, לילה)
+
+| נושא | החלטה |
+|---|---|
+| **שם המוצר** | **«מי מגיע»** · לטינית `Mi-Magia-VIP` · `src/lib/brand.ts` הוא המקור היחיד. «דניאל תומר אפטר» = שם **אירוע** (דמו `daniel-tomer`), לא שם מוצר |
+| **ריפו חי** | `noam2177/Mi-Magia-VIP` (לשעבר `danielntomerafter`; GitHub מפנה מהשם הישן) |
+| **ריפו ישן** | `noam2177/mi-magia-vip-legacy` — קריאה בלבד, README עם אזהרת LEGACY, תיאור ריפו מעודכן. **לא לפתח שם.** |
+| **ענפים** | `main` = גרסת החתונה (תג `wedding-v1`, נדחף). `product-v2` = שכבת המוצר + מיתוג (נדחף, 133 קבצים) |
+| **בסיס** | **גרסת החתונה** (ה-flow שהוכח). `product-v2` נכנס אליה כתוספת ב-Phase 1 |
+| **mi-magia-legacy** | מקור ל: Auth+ארגונים, לוג הודעות+webhook, נגישות/תנאים/פרטיות, ספקים/משימות (Phase 4/6). **לא** מקור לסטאק, לקישור `guest_id`, ל-RLS פתוח |
+| **Supabase** | פרויקט אחד לכל האירועים (הנחת עבודה; אפשר לשנות לפני Phase 2) |
+| **כניסת מארגן** | קישור ארוך (`/w/:token`) להשקה; Supabase Auth בהמשך (הנחת עבודה) |
+| **תיקייה מקומית** | `Documents\GitHub\danielntomerafter-main` — הרינום ל-`Mi-Magia-VIP` נחסם (תהליך מחזיק את התיקייה); לבצע אחרי סגירת Cursor. Worktree קריאה: `danielntomerafter-wedding-v1` |
 
 ---
 
@@ -130,11 +144,14 @@ RSVP-app (בסיס: wedding-v1)  ── אתר אחד, Supabase אחד
 
 ## 4. שלבים ושערים
 
-### Phase 0 — הגנה על מה שיש (היום · ~שעה)
-- [x] תג `wedding-v1` + worktree קריאה בלבד.
-- [ ] **commit ראשון** של העבודה החדשה על branch `product-v2` (לא על `main`) ודחיפה ל-GitHub, כדי שלא תאבד.
-- [ ] סיבוב מפתחות Supabase (ה-`.env` ב-git בשני הריפוז) והוצאת `.env` מה-index.
-- **שער:** הכול נשמר ב-GitHub, `wedding-v1` נגיש.
+### Phase 0 — הגנה על מה שיש ✅ (בוצע 29.9)
+- [x] תג `wedding-v1` + worktree קריאה בלבד; התג נדחף ל-origin.
+- [x] commit + push של `product-v2` (ללא `.env`).
+- [x] מיתוג «מי מגיע»: `brand.ts`, meta/OG, נחיתה, כותרת אדמין (לפי שם האירוע), מיילים למפעיל, `package.json`, README.
+- [x] רינום ריפוז ב-GitHub + LEGACY notice בישן.
+- [ ] **סיבוב מפתחות Supabase** — `.env` נמצא בהיסטוריה של `main` (Mi-Magia-VIP) ושל legacy. המפתחות הם publishable/anon, אבל לסובב ולוודא שאין service-role. פעולה ידנית שלך ב-Supabase.
+- [ ] `git rm --cached .env` ב-`main` (commit קטן, לא שכתוב היסטוריה) — כחלק מ-Phase 1.
+- **שער:** ✅ הכול ב-GitHub, `wedding-v1` נגיש.
 
 ### Phase 1 — בסיס = גרסת החתונה + שכבת המוצר (1–2 ימים)
 1. `product-v2` נבנה **מ-`origin/main`**, לא מהתיקייה המקומית.
@@ -206,7 +223,10 @@ RSVP-app (בסיס: wedding-v1)  ── אתר אחד, Supabase אחד
 
 ---
 
-## 7. מה אני מבצע מיד אחרי האישור שלך
-1. Phase 0: branch `product-v2`, commit, push, ניקוי `.env` מה-index.
-2. Phase 1: בנייה מחדש מ-`origin/main` + הכנסת שכבת המוצר, והשוואת דף החתונה.
-3. דיווח בסוף כל שלב עם תוצאות בדיקות ובילד.
+## 7. הצעד הבא — Phase 1 (מתחיל בישיבה הבאה)
+1. ענף `unify` מ-`main` (גרסת החתונה).
+2. העתקה **תוספתית** מ-`product-v2`: `src/lib/brand.ts`, `src/lib/domain/*` + בדיקות, `start`/`thanks`/`w.$accessToken`, `components/onboarding`, `components/feedback`, `operator-notify.server.ts`, `lib/api/onboarding|feedback.functions.ts`, `vitest.config.ts`, מיגרציית onboarding, `docs/*`, `.env.example`, `scripts/verify-launch-env.mjs`.
+3. **לא** להעתיק את `index.tsx`/`admin.index.tsx`/`welcome.tsx` של `product-v2` על אלו של החתונה. במקום: דף החתונה עובר ל-`/e/:slug`, האדמין של החתונה מקבל את `brand.ts` + תפריט תבניות WA, והנחיתה של `product-v2` הופכת ל-`/`.
+4. `git rm --cached .env`.
+5. `npm test` + `npm run build` + השוואה ויזואלית של `/e/daniel-tomer` מול `danielntomerafter-wedding-v1`.
+6. מיזוג `unify` → `main` רק אחרי השער.
